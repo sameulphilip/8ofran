@@ -1,0 +1,34 @@
+name: a3traf
+description: غفران — حجز موعد هادئ مع أب روحي.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  cloud_firestore: ^6.10.0
+  firebase_auth: ^6.7.0
+  firebase_core: ^4.15.0
+  flutter:
+    sdk: flutter
+  flutter_animate: ^4.5.2
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.2.3
+  google_fonts: ^8.1.0
+  intl: 0.20.2
+  shared_preferences: ^2.5.5
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/ghofran_logo.png
+    - assets/brand/ghofran_splash.gif
