@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "133980924089",
+    "project_number": "YOUR_PROJECT_NUMBER",
     "project_id": "ofran-7a7c5",
     "storage_bucket": "ofran-7a7c5.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:133980924089:android:204f33224b8b9bfe97d368",
+        "mobilesdk_app_id": "YOUR_ANDROID_APP_ID",
         "android_client_info": {
           "package_name": "com.a3traf.a3traf"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAX64fmSTWLbbtUUiw_gttfVDpET0sqHz0"
+          "current_key": "YOUR_ANDROID_API_KEY"
         }
       ],
       "services": {
