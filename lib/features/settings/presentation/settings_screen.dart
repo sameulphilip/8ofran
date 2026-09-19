@@ -5,6 +5,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_nav.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../../core/data/local_database.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -14,8 +15,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _reminders = true;
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider);
@@ -39,8 +38,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text(AppStrings.notifyReminders),
-            value: _reminders,
-            onChanged: (value) => setState(() => _reminders = value),
+            value: ref.watch(localDatabaseProvider).remindersEnabled(),
+            onChanged: (value) {
+              ref.read(localDatabaseProvider).setRemindersEnabled(value);
+              setState(() {});
+            },
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/brand_logo.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../booking/presentation/booking_nav.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -65,34 +66,79 @@ class AppDrawer extends ConsumerWidget {
                       AppStrings.home,
                       '/home',
                     ),
-                    _item(
-                      context,
-                      1,
-                      Icons.edit_calendar_outlined,
-                      AppStrings.bookConfession,
-                      '/priests',
-                    ),
-                    _item(
-                      context,
-                      2,
-                      Icons.event_available_outlined,
-                      AppStrings.upcomingAppointments,
-                      '/appointments',
-                    ),
-                    _item(
-                      context,
-                      3,
-                      Icons.groups_outlined,
-                      AppStrings.tilePriests,
-                      '/priests',
-                    ),
-                    _item(
-                      context,
-                      4,
-                      Icons.menu_book_outlined,
-                      AppStrings.infoAndGuides,
-                      '/info',
-                    ),
+                    if (ref.watch(authControllerProvider)?.isAdmin ??
+                        false) ...[
+                      _item(
+                        context,
+                        1,
+                        Icons.church_outlined,
+                        AppStrings.churches,
+                        '/admin/churches',
+                      ),
+                      _item(
+                        context,
+                        2,
+                        Icons.groups_outlined,
+                        AppStrings.managePriests,
+                        '/admin/priests',
+                      ),
+                    ] else if (ref.watch(authControllerProvider)?.isPriest ??
+                        false) ...[
+                      _item(
+                        context,
+                        1,
+                        Icons.calendar_view_week_outlined,
+                        AppStrings.confessionSchedule,
+                        '/priest/schedule',
+                      ),
+                      _item(
+                        context,
+                        2,
+                        Icons.hourglass_empty_rounded,
+                        AppStrings.overdueList,
+                        '/priest/overdue',
+                      ),
+                      _item(
+                        context,
+                        3,
+                        Icons.groups_outlined,
+                        AppStrings.flock,
+                        '/priest/flock',
+                      ),
+                    ] else ...[
+                      _item(
+                        context,
+                        1,
+                        Icons.edit_calendar_outlined,
+                        AppStrings.bookConfession,
+                        null,
+                        onTap: () {
+                          Navigator.pop(context);
+                          openMemberBooking(context, ref);
+                        },
+                      ),
+                      _item(
+                        context,
+                        2,
+                        Icons.event_available_outlined,
+                        AppStrings.upcomingAppointments,
+                        '/appointments',
+                      ),
+                      _item(
+                        context,
+                        3,
+                        Icons.auto_stories_outlined,
+                        AppStrings.spiritualRule,
+                        '/rule',
+                      ),
+                      _item(
+                        context,
+                        4,
+                        Icons.menu_book_outlined,
+                        AppStrings.infoAndGuides,
+                        '/info',
+                      ),
+                    ],
                     _item(
                       context,
                       5,
@@ -155,15 +201,22 @@ class AppDrawer extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: active ? Colors.white.withValues(alpha: 0.10) : Colors.transparent,
+        color: active
+            ? Colors.white.withValues(alpha: 0.10)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: ListTile(
-          onTap: onTap ??
+          onTap:
+              onTap ??
               () {
                 Navigator.pop(context);
                 if (route != null) context.go(route);
               },
-          leading: Icon(icon, color: Colors.white.withValues(alpha: 0.88), size: 22),
+          leading: Icon(
+            icon,
+            color: Colors.white.withValues(alpha: 0.88),
+            size: 22,
+          ),
           title: Text(
             label,
             style: GoogleFonts.cairo(

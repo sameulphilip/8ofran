@@ -15,6 +15,7 @@ import '../../../core/widgets/priest_avatar.dart';
 import '../../../core/widgets/segmented_tabs.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../booking/presentation/booking_nav.dart';
 import '../../priests/data/priest_repository.dart';
 import '../data/appointment_repository.dart';
 import '../domain/appointment.dart';
@@ -71,7 +72,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                           ? AppStrings.bookNewAppointment
                           : null,
                       onAction: _tab == 0
-                          ? () => context.go('/priests')
+                          ? () => openMemberBooking(context, ref)
                           : null,
                     ),
                   )
@@ -102,7 +103,8 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                                 PriestAvatar(
                                   name: priest.name,
                                   seed: priest.id.hashCode,
-                                  heroTag: 'priest-${priest.id}-${appointment.id}',
+                                  heroTag:
+                                      'priest-${priest.id}-${appointment.id}',
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -156,8 +158,10 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                                   Expanded(
                                     child: TonalButton(
                                       label: AppStrings.reschedule,
-                                      onPressed: () => context.push(
-                                        '/priests?rescheduleId=${appointment.id}',
+                                      onPressed: () => openMemberBooking(
+                                        context,
+                                        ref,
+                                        rescheduleId: appointment.id,
                                       ),
                                     ),
                                   ),

@@ -189,7 +189,7 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
               ),
             ),
             PrimaryButton(
-              label: AppStrings.confirm,
+              label: AppStrings.sendBookingRequest,
               busy: _busy,
               onPressed: _busy ? null : _confirm,
             ),
@@ -205,7 +205,10 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
         Icon(icon, color: AppColors.primary600, size: 18),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

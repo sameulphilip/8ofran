@@ -13,39 +13,164 @@ service cloud.firestore {
       return request.resource.data.keys().hasAny(['password', 'confession', 'exam']);
     }
 
+    function isSeedAdmin() {
+      return signedIn() && request.auth.token.email == 'admin@ghofran.app';
+    }
+
+    function isAdmin() {
+      return isSeedAdmin() || (
+        signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    function priestEmailMatch() {
+      return request.resource.data.priestId is string
+        && exists(/databases/$(database)/documents/priests/$(request.resource.data.priestId))
+        && get(/databases/$(database)/documents/priests/$(request.resource.data.priestId)).data.email
+          == request.auth.token.email;
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isPriest() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userData().role == 'priest';
+    }
+
+    function isAppointmentPriest() {
+      return isPriest() && userData().priestId == resource.data.priestId;
+    }
+
     match /users/{uid} {
       allow read: if signedIn();
-      allow create, update: if isOwner(uid) && !hasForbiddenKeys();
+      allow create: if !hasForbiddenKeys() && (isOwner(uid) || isAdmin());
+      allow update: if !hasForbiddenKeys() && (
+        isAdmin()
+        || (
+          isOwner(uid) && (
+            (
+              request.resource.data.role == resource.data.role
+              && request.resource.data.get('priestId', '') == resource.data.get('priestId', '')
+            )
+            || priestEmailMatch()
+            || (
+              request.resource.data.role == 'admin'
+              && isSeedAdmin()
+            )
+          )
+        )
+      );
       allow delete: if false;
     }
 
     match /usernames/{name} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if false;
+      allow create: if signedIn() && (
+        request.resource.data.uid == request.auth.uid
+        || isAdmin()
+      );
+      allow update: if signedIn() && (
+        resource.data.uid == request.auth.uid
+        || request.resource.data.uid == request.auth.uid
+        || isAdmin()
+      );
+      allow delete: if false;
+    }
+
+    match /churches/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /priests/{id} {
-      allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if false;
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.email == request.auth.token.email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid'])
+      );
+      allow delete: if false;
     }
 
     match /appointments/{id} {
       allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid
-        && !hasForbiddenKeys();
-      allow update: if signedIn()
-        && resource.data.userId == request.auth.uid
-        && !hasForbiddenKeys();
+      allow create: if !hasForbiddenKeys() && (
+        isAdmin()
+        || (
+          signedIn()
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && userData().fatherId == request.resource.data.priestId
+        )
+      );
+      allow update: if signedIn() && !hasForbiddenKeys() && (
+        isAdmin()
+        || isAppointmentPriest()
+        || (
+          resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.priestId == resource.data.priestId
+        )
+      );
       allow delete: if false;
     }
 
     match /notifications/{id} {
       allow read, update: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && !hasForbiddenKeys() && (
+        isAdmin()
+        || isPriest()
+        || request.resource.data.userId == request.auth.uid
+        || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && userData().fatherId is string
+          && exists(/databases/$(database)/documents/priests/$(userData().fatherId))
+          && get(/databases/$(database)/documents/priests/$(userData().fatherId)).data.uid
+            == request.resource.data.userId
+        )
+      );
       allow delete: if false;
+    }
+
+    match /pastoral_care/{uid} {
+      allow read: if signedIn() && (
+        request.auth.uid == uid
+        || resource.data.priestUid == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+          == resource.data.priestId
+      );
+      allow create, update: if signedIn() && !hasForbiddenKeys() && (
+        request.auth.uid == uid
+        || request.resource.data.priestUid == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+          == request.resource.data.priestId
+      );
+      allow delete: if false;
+    }
+
+    match /spiritual_canons/{id} {
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.priestUid == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+          == resource.data.priestId
+      );
+      allow create: if signedIn() && !hasForbiddenKeys()
+        && request.resource.data.keys().hasAny(['rule'])
+        && (
+          request.resource.data.priestUid == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+            == request.resource.data.priestId
+        );
+      allow update, delete: if false;
     }
   }
 }

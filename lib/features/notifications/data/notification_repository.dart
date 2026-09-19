@@ -43,6 +43,38 @@ class NotificationRepository {
     return forUser(userId).where((n) => !n.read).length;
   }
 
+  Future<void> upsert({
+    required String id,
+    required String userId,
+    required String title,
+    required String body,
+  }) async {
+    if (_cloud) {
+      final ref = _store!.collection('notifications').doc(id);
+      final existing = await ref.get();
+      if (existing.exists) return;
+      await ref.set({
+        'userId': userId,
+        'title': title,
+        'body': body,
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+      return;
+    }
+    final items = forUser(userId);
+    if (items.any((item) => item.id == id)) return;
+    await _db.saveNotifications(userId, [
+      AppNotification(
+        id: id,
+        title: title,
+        body: body,
+        createdAt: DateTime.now(),
+      ),
+      ...items,
+    ]);
+  }
+
   Future<void> add({
     required String userId,
     required String title,

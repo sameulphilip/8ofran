@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/data/local_database.dart';
 import '../../appointments/data/appointment_repository.dart';
 import '../../appointments/domain/appointment.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../care/data/care_repository.dart';
+import '../../care/data/reminder_dispatcher.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/domain/app_notification.dart';
 import '../../priests/domain/priest.dart';
@@ -25,7 +28,10 @@ class BookingController extends Notifier<BookingDraft> {
   }
 
   void clearSlot() {
-    state = BookingDraft(priest: state.priest, rescheduleId: state.rescheduleId);
+    state = BookingDraft(
+      priest: state.priest,
+      rescheduleId: state.rescheduleId,
+    );
   }
 
   Future<Appointment> confirm({String notes = ''}) async {
@@ -33,6 +39,9 @@ class BookingController extends Notifier<BookingDraft> {
     final draft = state;
     if (user == null || !draft.canConfirm) {
       throw StateError('incomplete booking');
+    }
+    if (user.hasFather && draft.priest!.id != user.fatherId) {
+      throw StateError('wrong father');
     }
     final appointment = await ref
         .read(appointmentRepositoryProvider)
@@ -42,6 +51,14 @@ class BookingController extends Notifier<BookingDraft> {
           startsAt: draft.startsAt!,
           notes: notes,
           rescheduleId: draft.rescheduleId,
+          priestUid: draft.priest!.uid,
+        );
+    await ref
+        .read(careRepositoryProvider)
+        .ensureLink(
+          userId: user.id,
+          priestId: draft.priest!.id,
+          priestUid: draft.priest!.uid,
         );
     ref.invalidate(appointmentsStreamProvider);
     ref.invalidate(userNotificationsProvider);
@@ -77,7 +94,19 @@ final userNotificationsProvider = StreamProvider<List<AppNotification>>((ref) {
 
 final unreadCountProvider = Provider<int>((ref) {
   final items =
-      ref.watch(userNotificationsProvider).value ??
-      const <AppNotification>[];
+      ref.watch(userNotificationsProvider).value ?? const <AppNotification>[];
   return items.where((item) => !item.read).length;
+});
+
+final reminderSyncProvider = FutureProvider<void>((ref) async {
+  final user = ref.watch(authControllerProvider);
+  if (user == null || user.isPriest) return;
+  final db = ref.watch(localDatabaseProvider);
+  final care = await ref.watch(myCareProvider.future);
+  await ReminderDispatcher(ref.read(notificationRepositoryProvider)).sync(
+    userId: user.id,
+    appointments: ref.watch(allAppointmentsProvider),
+    care: care,
+    enabled: db.remindersEnabled(),
+  );
 });

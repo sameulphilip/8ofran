@@ -40,7 +40,8 @@ class AppStrings {
   static const loginFailed = 'اسم المستخدم أو كلمة المرور غير صحيحة';
   static const usernameTaken = 'اسم المستخدم مستخدم من قبل';
   static const emailTaken = 'هذا البريد مسجّل من قبل';
-  static const googleMockNotice = 'تعذّر الدخول بجوجل. جرّب البريد أو أنشئ حساباً.';
+  static const googleMockNotice =
+      'تعذّر الدخول بجوجل. جرّب البريد أو أنشئ حساباً.';
   static const noConnection = 'لا يوجد اتصال بالإنترنت';
   static const firebaseNotReady =
       'خدمة الحسابات غير مفعّلة بعد. فعّل Email/Password وGoogle في Firebase Authentication.';
@@ -52,6 +53,25 @@ class AppStrings {
   static const bookingConfirmedBody = 'تم تأكيد موعدك على غفران.';
   static const bookingCancelledTitle = 'تم إلغاء الموعد';
   static const bookingCancelledBody = 'تم إلغاء الموعد.';
+  static const bookingRequestedTitle = 'تم إرسال طلب الحجز';
+  static const bookingRequestedBody = 'طلبك وصل للأب. هيتأكد الموعد لما يوافق.';
+  static const bookingRequestPriestTitle = 'طلب حجز جديد';
+  static const bookingRequestPriestBody =
+      'أحد الأبناء يطلب موعدًا. راجع الطلب.';
+  static const bookingRejectedTitle = 'لم يُقبل طلب الحجز';
+  static const bookingRejectedBody =
+      'الأب لم يوافق على هذا الموعد. يمكنك طلب وقت آخر.';
+  static const sendBookingRequest = 'إرسال طلب الحجز';
+  static const waitingPriestApproval = 'في انتظار موافقة الأب';
+  static const approveRequest = 'موافقة';
+  static const rejectRequest = 'رفض';
+  static const bookingRequests = 'طلبات الحجز';
+  static const emptyRequests = 'لا توجد طلبات بانتظار الموافقة';
+  static const chooseFather = 'الأب الروحي';
+  static const chooseFatherHint =
+      'اختار أباك الروحي. طلبات الحجز هتروح له للموافقة.';
+  static const chooseFatherError = 'اختر الأب الروحي';
+  static const fatherSaved = 'تم حفظ الأب الروحي.';
 
   static const welcome = 'مرحباً';
   static const peaceGreeting = 'سلام الرب معك دائماً';
@@ -102,9 +122,9 @@ class AppStrings {
   static const timeLabel = 'الوقت';
   static const placeLabel = 'المكان';
 
-  static const bookingSuccessTitle = 'تم حجز موعدك بنجاح';
+  static const bookingSuccessTitle = 'تم إرسال طلبك';
   static const bookingSuccessBody =
-      'شكراً لك، تم حجز موعدك، ونتطلع لرؤيتك.';
+      'شكرًا لك. الطلب عند الأب الآن، وهيتأكد الموعد لما يوافق.';
   static const backHome = 'العودة للرئيسية';
   static const showAppointments = 'عرض مواعيدي';
   static const slotTaken = 'هذا الموعد لم يعد متاحاً، اختر وقتاً آخر';
@@ -140,7 +160,8 @@ class AppStrings {
   static String cancelBodyFor(String name, String date) =>
       'سيتم إلغاء موعدك مع $name يوم $date. يمكنك حجز موعد جديد في أي وقت.';
 
-  static String inHours(int hours) => hours <= 1 ? 'بعد أقل من ساعة' : 'بعد $hours ساعات';
+  static String inHours(int hours) =>
+      hours <= 1 ? 'بعد أقل من ساعة' : 'بعد $hours ساعات';
   static const cancelTooLate =
       'لا يمكن إلغاء أو تغيير الموعد قبل أقل من 12 ساعة.';
   static const emptyUpcoming = 'لا يوجد موعد قادم';
@@ -156,7 +177,7 @@ class AppStrings {
   static const openMaps = 'فتح الموقع على الخريطة';
   static const supportAddress = 'خدمة عامة — مصر';
   static const supportPhone = '01000000000';
-  static const supportEmail = 'hello@bonowa.app';
+  static const supportEmail = 'hello@ghofran.app';
   static const serviceHours = 'الحجز متاح معظم الأيام من 3:00 م إلى 7:00 م';
 
   static const infoTitle = 'استعداد للموعد';
@@ -181,6 +202,16 @@ class AppStrings {
   static const privacyPolicy = 'سياسة الخصوصية';
   static const aboutApp = 'عن غفران';
   static const demoHint = 'أنشئ حساباً جديداً أو ادخل ببريدك.';
+  static const testersTitle = 'حسابات التجربة';
+  static const testersPasswordHint = 'كلمة المرور لكل الحسابات: 12345678';
+  static const testerAdmin = 'إدارة';
+  static const testerPriestSchedule = 'كاهن بجدول';
+  static const testerPriestMorning = 'كاهن صباحي';
+  static const testerUpcoming = 'موعد قادم';
+  static const testerEmpty = 'بدون مواعيد';
+  static const testerOverdue = 'متأخر';
+  static const testerRule = 'قانون روحي';
+  static const testerLocked = 'إلغاء مقفول';
   static const comingSoon = 'قريباً';
 
   static const contactPhone = 'اتصال';
@@ -197,4 +228,116 @@ class AppStrings {
       'التطبيق يسجّل مين ومع مين وإمتى. لا يسجّل محتوى الجلسة.';
 
   static const weekdays = ['س', 'ح', 'ن', 'ث', 'ر', 'خ', 'ج'];
+
+  static const reminderTwoDaysTitle = 'موعدك بعد يومين';
+  static const reminderOneDayTitle = 'موعدك غداً';
+  static const reminderAppointmentBody = 'خذ وقتك، وجهّز قلبك للموعد.';
+  static const reminderChannelName = 'تذكير المواعيد';
+  static const reminderChannelBody = 'تذكير قبل موعدك بيوم أو يومين';
+  static const cadenceReminderTitle = 'تذكير بالموعد الروحي';
+  static const cadenceReminderBody =
+      'الأب حدّد فترة للاعتراف. احجز موعداً لما يتيسّر.';
+
+  static const spiritualRule = 'القانون الروحي';
+  static const spiritualRuleHint =
+      'القانون الذي يعطيه الأب يظهر هنا. محتوى الجلسة لا يُحفظ.';
+  static const emptyRule = 'لا يوجد قانون روحي حالياً';
+  static const emptyRuleHint = 'لما الأب يكتب لك قانوناً، هيظهر هنا.';
+  static const givenBy = 'من الأب';
+  static const priestDesk = 'خدمة الأب';
+  static const confessionSchedule = 'جدول الاعتراف';
+  static const overdueList = 'تأخروا عن الموعد';
+  static const emptySchedule = 'لا مواعيد في الجدول الآن';
+  static const emptyOverdue = 'لا أحد متأخر حالياً';
+  static const neverVisited = 'لم يُسجَّل موعد بعد';
+  static const assignRule = 'إعطاء قانون روحي';
+  static const ruleFieldHint =
+      'صلوات أو قراءة أو صوم بسيط. لا تكتب محتوى الاعتراف.';
+  static const saveRule = 'حفظ القانون';
+  static const ruleSaved = 'تم حفظ القانون، وسيظهر عند الابن.';
+  static const confessionCadence = 'التذكير بالاعتراف';
+  static const cadenceHint = 'كل قد إيه يتذكّر الابن يحجز؟';
+  static const cadenceSaved = 'تم ضبط فترة التذكير.';
+  static const flock = 'الأبناء';
+  static const choosePerson = 'اختر ابناً';
+  static const lastVisitLabel = 'آخر موعد';
+  static const dueNow = 'مستحق الآن';
+  static const tileRule = 'القانون الروحي';
+  static const priestEmailHint =
+      'حساب الأب يُنشأ من شاشة الإدارة، أو يسجّل الأب بنفس البريد المحفوظ له.';
+
+  static const adminDesk = 'لوحة الإدارة';
+  static const churches = 'الكنائس';
+  static const managePriests = 'الآباء والحسابات';
+  static const addChurch = 'إضافة كنيسة';
+  static const editChurch = 'تعديل الكنيسة';
+  static const churchName = 'اسم الكنيسة';
+  static const cityLabel = 'المدينة';
+  static const emptyChurches = 'لا توجد كنائس بعد';
+  static const emptyChurchesHint = 'أضف كنيسة أولاً، ثم اربط بها الآباء.';
+  static const saveChurch = 'حفظ الكنيسة';
+  static const churchSaved = 'تم حفظ الكنيسة.';
+  static const addPriest = 'إضافة أب';
+  static const editPriest = 'تعديل الأب';
+  static const savePriest = 'حفظ بيانات الأب';
+  static const priestSaved = 'تم حفظ بيانات الأب.';
+  static const priestHours = 'ساعات الخدمة';
+  static const hoursFrom = 'من';
+  static const hoursTo = 'إلى';
+  static const lastSlotHint = 'آخر موعد يبدأ في هذا الوقت';
+  static const slotLength = 'مدة الموعد';
+  static const offDays = 'أيام الإجازة';
+  static const priestAvailable = 'ظاهر في قائمة الحجز';
+  static const chooseChurch = 'الكنيسة';
+  static const chooseChurchError = 'اختر كنيسة';
+  static const hoursInvalid = 'وقت البداية يجب أن يكون قبل النهاية';
+  static const createPriestAccount = 'إنشاء حساب الدخول';
+  static const accountLinked = 'الحساب مربوط';
+  static const sendResetLink = 'إرسال رابط كلمة المرور';
+  static const accountCreated =
+      'تم إنشاء حساب الأب. سلّمه كلمة المرور خارج التطبيق.';
+  static const resetLinkSent = 'إن وُجد الحساب سنرسل رابط إعادة التعيين.';
+  static const emptyAdminPriests = 'لا يوجد آباء بعد';
+  static const emptyAdminPriestsHint =
+      'أضف أباً، حدّد ساعات خدمته، وأنشئ له حساباً.';
+  static const hiddenFromBooking = 'مخفي من الحجز';
+  static const noAccountYet = 'بدون حساب دخول';
+  static const minutesUnit = 'دقيقة';
+  static const weekdaySaturday = 'السبت';
+  static const weekdaySunday = 'الأحد';
+  static const weekdayMonday = 'الاثنين';
+  static const weekdayTuesday = 'الثلاثاء';
+  static const weekdayWednesday = 'الأربعاء';
+  static const weekdayThursday = 'الخميس';
+  static const weekdayFriday = 'الجمعة';
+  static const adminEmailHint =
+      'ادخل ببريد الإدارة admin@ghofran.app لإدارة الكنائس والآباء.';
+
+  static String minutesLabel(int minutes) => '$minutes $minutesUnit';
+
+  static String weekdayName(int weekday) {
+    return switch (weekday) {
+      DateTime.saturday => weekdaySaturday,
+      DateTime.sunday => weekdaySunday,
+      DateTime.monday => weekdayMonday,
+      DateTime.tuesday => weekdayTuesday,
+      DateTime.wednesday => weekdayWednesday,
+      DateTime.thursday => weekdayThursday,
+      DateTime.friday => weekdayFriday,
+      _ => '$weekday',
+    };
+  }
+
+  static String everyNDays(int days) {
+    if (days == 7) return 'كل أسبوع';
+    if (days == 14) return 'كل أسبوعين';
+    return 'كل $days يوماً';
+  }
+
+  static String daysSinceVisit(int days) {
+    if (days < 0) return neverVisited;
+    if (days == 0) return 'اليوم';
+    if (days == 1) return 'منذ يوم';
+    return 'منذ $days يوماً';
+  }
 }

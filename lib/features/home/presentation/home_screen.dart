@@ -11,11 +11,16 @@ import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/home_tile.dart';
 import '../../../core/widgets/priest_avatar.dart';
+import '../../../core/widgets/status_badge.dart';
 import '../../../core/widgets/verse_banner.dart';
+import '../../admin/presentation/admin_home_screen.dart';
 import '../../appointments/domain/appointment.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../booking/presentation/booking_nav.dart';
 import '../../priests/data/priest_repository.dart';
+import '../../care/data/care_repository.dart';
+import '../../care/presentation/priest_home_screen.dart';
 import 'app_drawer.dart';
 import 'verse_of_day.dart';
 
@@ -25,6 +30,13 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider);
+    if (user?.isAdmin ?? false) {
+      return const AdminHomeScreen();
+    }
+    if (user?.isPriest ?? false) {
+      return const PriestHomeScreen();
+    }
+    ref.watch(reminderSyncProvider);
     final unread = ref.watch(unreadCountProvider);
     final appointments = ref.watch(userAppointmentsProvider);
     final next = appointments.cast<Appointment?>().firstWhere(
@@ -34,8 +46,8 @@ class HomeScreen extends ConsumerWidget {
     final priest = next == null
         ? null
         : ref.watch(priestRepositoryProvider).byId(next.priestId);
+    final canon = ref.watch(myCanonProvider).value;
     final verse = VerseOfDay.today();
-
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -117,10 +129,7 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      PriestAvatar(
-                        name: priest.name,
-                        seed: priest.id.hashCode,
-                      ),
+                      PriestAvatar(name: priest.name, seed: priest.id.hashCode),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -148,6 +157,8 @@ class HomeScreen extends ConsumerWidget {
                                 fontSize: 13,
                               ),
                             ),
+                            const SizedBox(height: 8),
+                            StatusBadge(status: next.status),
                           ],
                         ),
                       ),
@@ -169,11 +180,34 @@ class HomeScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   TonalButton(
                     label: AppStrings.emptyUpcomingAction,
-                    onPressed: () => context.push('/priests'),
+                    onPressed: () => openMemberBooking(context, ref),
                   ),
                 ],
               ),
             ).enter(context),
+          if (canon != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              color: AppColors.gold100,
+              onTap: () => context.push('/rule'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    AppStrings.spiritualRule,
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    canon.rule,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(height: 1.5),
+                  ),
+                ],
+              ),
+            ).enter(context, index: 1),
+          ],
           const SizedBox(height: 12),
           GridView.count(
             shrinkWrap: true,
@@ -188,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
                 icon: Icons.calendar_month_outlined,
                 background: AppColors.tileBook,
                 foreground: AppColors.primary700,
-                onTap: () => context.push('/priests'),
+                onTap: () => openMemberBooking(context, ref),
               ).enter(context, index: 1),
               HomeTile(
                 title: AppStrings.tileAppointments,
@@ -198,11 +232,11 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => context.push('/appointments'),
               ).enter(context, index: 2),
               HomeTile(
-                title: AppStrings.tilePriests,
-                icon: Icons.groups_outlined,
-                background: AppColors.tilePriests,
-                foreground: AppColors.primary700,
-                onTap: () => context.push('/priests'),
+                title: AppStrings.tileRule,
+                icon: Icons.auto_stories_outlined,
+                background: AppColors.gold100,
+                foreground: AppColors.gold700,
+                onTap: () => context.push('/rule'),
               ).enter(context, index: 3),
               HomeTile(
                 title: AppStrings.tileInfo,

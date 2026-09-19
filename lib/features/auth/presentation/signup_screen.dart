@@ -10,6 +10,9 @@ import '../../../core/widgets/google_sign_in_button.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../data/auth_repository.dart';
+import '../../care/data/care_repository.dart';
+import '../../priests/data/priest_repository.dart';
+import '../../priests/presentation/father_picker_field.dart';
 import 'auth_controller.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -28,6 +31,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _confirm = TextEditingController();
   bool _accepted = false;
   bool _busy = false;
+  String? _fatherId;
 
   @override
   void dispose() {
@@ -56,7 +60,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             username: _username.text,
             email: _email.text,
             password: _password.text,
+            fatherId: _fatherId,
           );
+      final user = ref.read(authControllerProvider);
+      if (user?.hasFather == true) {
+        final priest = ref.read(priestRepositoryProvider).byId(user!.fatherId!);
+        await ref
+            .read(careRepositoryProvider)
+            .ensureLink(
+              userId: user.id,
+              priestId: user.fatherId!,
+              priestUid: priest?.uid,
+            );
+      }
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -111,7 +127,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               color: AppColors.primary100,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person_outline, color: AppColors.primary700),
+            child: const Icon(
+              Icons.person_outline,
+              color: AppColors.primary700,
+            ),
           ),
           const SizedBox(height: 22),
           Form(
@@ -155,6 +174,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   obscureText: true,
                   validator: (value) =>
                       Validators.confirmPassword(value, _password.text),
+                ),
+                const SizedBox(height: 12),
+                FatherPickerField(
+                  value: _fatherId,
+                  priests: (ref.watch(priestsStreamProvider).value ?? const [])
+                      .where((priest) => priest.isAvailable)
+                      .toList(),
+                  onChanged: (value) => setState(() => _fatherId = value),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppStrings.chooseFatherHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(

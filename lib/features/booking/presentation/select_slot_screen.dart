@@ -52,6 +52,7 @@ class _SelectSlotScreenState extends ConsumerState<SelectSlotScreen> {
         date: day,
         ignoreAppointmentId: draft.rescheduleId,
         items: items,
+        priest: priest,
       );
       if (open.isNotEmpty) return day;
     }
@@ -75,6 +76,7 @@ class _SelectSlotScreenState extends ConsumerState<SelectSlotScreen> {
                 date: _selected,
                 ignoreAppointmentId: draft.rescheduleId,
                 items: booked,
+                priest: priest,
               )
         : const [];
     final hasOpen = slots.any((slot) => slot.selectable);

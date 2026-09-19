@@ -14,4 +14,8 @@ class DateFormatters {
   static String time(DateTime date) {
     return DateFormat('h:mm a', 'ar').format(date);
   }
+
+  static String hourOfDay(int hour) {
+    return time(DateTime(2026, 1, 1, hour));
+  }
 }

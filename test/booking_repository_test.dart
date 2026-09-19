@@ -34,7 +34,7 @@ void main() {
       priestId: 'p_botros',
       startsAt: slot,
     );
-    expect(first.status, AppointmentStatus.confirmed);
+    expect(first.status, AppointmentStatus.pending);
     expect(
       () => repository.book(userId: 'u1', priestId: 'p_botros', startsAt: slot),
       throwsA(isA<SlotTakenException>()),
@@ -55,7 +55,64 @@ void main() {
       priestId: 'p_mina',
       startsAt: slot,
     );
-    expect(second.status, AppointmentStatus.confirmed);
+    expect(second.status, AppointmentStatus.pending);
+  });
+
+  test('cancel is blocked inside the 12 hour window', () async {
+    final starts = DateTime.now().add(const Duration(hours: 6));
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: starts,
+    );
+    await repository.respond(appointmentId: booked.id, approve: true);
+    expect(repository.canModify(booked.startsAt), isFalse);
+    expect(
+      () => repository.cancel(booked.id),
+      throwsA(isA<CancelWindowException>()),
+    );
+  });
+
+  test('priest approval confirms a pending request', () async {
+    final starts = DateTime.now().add(const Duration(days: 18));
+    final slot = DateTime(starts.year, starts.month, starts.day, 16);
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: slot,
+    );
+    expect(booked.status, AppointmentStatus.pending);
+    await repository.respond(appointmentId: booked.id, approve: true);
+    expect(repository.byId(booked.id)?.status, AppointmentStatus.confirmed);
+  });
+
+  test('priest rejection frees the slot', () async {
+    final starts = DateTime.now().add(const Duration(days: 19));
+    final slot = DateTime(starts.year, starts.month, starts.day, 17);
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_mina',
+      startsAt: slot,
+    );
+    await repository.respond(appointmentId: booked.id, approve: false);
+    expect(repository.byId(booked.id)?.status, AppointmentStatus.cancelled);
+    final again = await repository.book(
+      userId: 'u1',
+      priestId: 'p_mina',
+      startsAt: slot,
+    );
+    expect(again.status, AppointmentStatus.pending);
+  });
+
+  test('pending requests can be cancelled inside the 12 hour window', () async {
+    final starts = DateTime.now().add(const Duration(hours: 6));
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: starts,
+    );
+    await repository.cancel(booked.id);
+    expect(repository.byId(booked.id)?.status, AppointmentStatus.cancelled);
   });
 
   test('priest availability list excludes taken slots', () async {

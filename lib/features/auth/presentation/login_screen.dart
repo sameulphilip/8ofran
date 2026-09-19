@@ -1,20 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/form_error_banner.dart';
 import '../../../core/widgets/google_sign_in_button.dart';
-import '../../../core/widgets/login_hero.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/shake.dart';
 import '../data/auth_repository.dart';
 import 'auth_controller.dart';
+import 'tester_picker.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -159,114 +163,179 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  ThemeData _navyTheme(BuildContext context) {
+    const onNavy = Color(0xFFF6F8FB);
+    const muted = Color(0xFFB8C4D4);
+    final outline = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: onNavy.withValues(alpha: 0.28)),
+    );
+    return Theme.of(context).copyWith(
+      scaffoldBackgroundColor: AppColors.splash,
+      colorScheme: Theme.of(context).colorScheme.copyWith(
+        surface: AppColors.splash,
+        onSurface: onNavy,
+        outline: onNavy.withValues(alpha: 0.35),
+        primary: AppColors.gold500,
+      ),
+      hintColor: muted,
+      dividerColor: onNavy.withValues(alpha: 0.2),
+      textTheme: GoogleFonts.cairoTextTheme(
+        ThemeData.dark().textTheme,
+      ).apply(bodyColor: onNavy, displayColor: onNavy),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return AppColors.gold500;
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(AppColors.splash),
+        side: BorderSide(color: onNavy.withValues(alpha: 0.45), width: 1.4),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.gold500),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.splash,
+        titleTextStyle: GoogleFonts.cairo(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.bg,
+        ),
+        contentTextStyle: GoogleFonts.cairo(color: AppColors.bg, height: 1.5),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.splash,
+        hintStyle: const TextStyle(color: muted),
+        labelStyle: const TextStyle(color: muted),
+        enabledBorder: outline,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.gold500, width: 1.6),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.danger500),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: const BorderSide(color: AppColors.danger500, width: 1.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.sizeOf(context).height;
-
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: Column(
-        children: [
-          SizedBox(height: height * 0.38, child: const LoginHero()),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x140F2238),
-                    blurRadius: 16,
-                    offset: Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-                children: [
-                  Shake(
-                    trigger: _shake,
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          FormErrorBanner(messages: _errors),
-                          AppTextField(
-                            hint: AppStrings.emailOrUsername,
-                            controller: _userController,
-                            icon: Icons.person_outline,
-                            validator: Validators.required,
-                            autovalidateMode: _mode,
-                            textInputAction: TextInputAction.next,
-                          ),
-                          const SizedBox(height: 12),
-                          AppTextField(
-                            hint: AppStrings.password,
-                            controller: _passwordController,
-                            icon: Icons.lock_outline,
-                            obscureText: true,
-                            validator: Validators.password,
-                            autovalidateMode: _mode,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submit(),
-                          ),
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: _remember,
-                                onChanged: (value) {
-                                  setState(() => _remember = value ?? false);
-                                },
-                              ),
-                              const Text(AppStrings.rememberMe),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: _forgot,
-                                child: const Text(AppStrings.forgotPassword),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          PrimaryButton(
-                            label: AppStrings.login,
-                            busy: _busy,
-                            onPressed: _busy ? null : _submit,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.splash,
+      ),
+      child: Theme(
+        data: _navyTheme(context),
+        child: Scaffold(
+          backgroundColor: AppColors.splash,
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+              children: [
+                const SizedBox(height: 12),
+                const BrandLogo(height: 168),
+                const SizedBox(height: 28),
+                Shake(
+                  trigger: _shake,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        FormErrorBanner(messages: _errors),
+                        AppTextField(
+                          hint: AppStrings.emailOrUsername,
+                          controller: _userController,
+                          icon: Icons.person_outline,
+                          validator: Validators.required,
+                          autovalidateMode: _mode,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 12),
+                        AppTextField(
+                          hint: AppStrings.password,
+                          controller: _passwordController,
+                          icon: Icons.lock_outline,
+                          obscureText: true,
+                          validator: Validators.password,
+                          autovalidateMode: _mode,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _submit(),
+                        ),
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _remember,
+                              onChanged: (value) {
+                                setState(() => _remember = value ?? false);
+                              },
+                            ),
+                            const Text(AppStrings.rememberMe),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: _forgot,
+                              child: const Text(AppStrings.forgotPassword),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        PrimaryButton(
+                          label: AppStrings.login,
+                          busy: _busy,
+                          backgroundColor: AppColors.gold500,
+                          foregroundColor: AppColors.splash,
+                          onPressed: _busy ? null : _submit,
+                        ),
+                        const SizedBox(height: 16),
+                        const OrDivider(),
+                        const SizedBox(height: 16),
+                        GoogleSignInButton(onPressed: _busy ? null : _google),
+                        const SizedBox(height: 16),
+                        if (kDebugMode) ...[
+                          TesterPicker(
+                            onSelect: (tester) {
+                              setState(() {
+                                _userController.text = tester.email;
+                                _passwordController.text = tester.password;
+                                _errors.clear();
+                              });
+                            },
                           ),
                           const SizedBox(height: 16),
-                          const OrDivider(),
-                          const SizedBox(height: 16),
-                          GoogleSignInButton(onPressed: _busy ? null : _google),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            children: [
-                              Text(
-                                AppStrings.noAccount,
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.text600),
-                              ),
-                              TextButton(
-                                onPressed: () => context.go('/signup'),
-                                child: const Text(AppStrings.createNewAccount),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            AppStrings.demoHint,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.text500),
-                          ),
                         ],
-                      ),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          children: [
+                            Text(
+                              AppStrings.noAccount,
+                              style: const TextStyle(color: AppColors.disabled),
+                            ),
+                            TextButton(
+                              onPressed: () => context.go('/signup'),
+                              child: const Text(AppStrings.createNewAccount),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          AppStrings.demoHint,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.disabled),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

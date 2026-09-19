@@ -11,6 +11,8 @@ class PriestRepository {
 
   List<Priest> all() => _items.where((p) => p.isAvailable).toList();
 
+  List<Priest> directory() => List.unmodifiable(_items);
+
   Priest? byId(String id) {
     return _items.cast<Priest?>().firstWhere(
       (p) => p!.id == id,

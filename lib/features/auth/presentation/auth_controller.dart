@@ -27,6 +27,7 @@ class AuthController extends Notifier<AppUser?> {
     required String username,
     required String email,
     required String password,
+    String? fatherId,
   }) async {
     state = await ref
         .read(authRepositoryProvider)
@@ -35,7 +36,12 @@ class AuthController extends Notifier<AppUser?> {
           username: username,
           email: email,
           password: password,
+          fatherId: fatherId,
         );
+  }
+
+  Future<void> setFather(String fatherId) async {
+    state = await ref.read(authRepositoryProvider).setFather(fatherId);
   }
 
   Future<void> loginWithGoogle() async {

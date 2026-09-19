@@ -17,6 +17,8 @@ class Appointment {
   final AppointmentStatus status;
   final String notes;
 
+  bool get isPending => status == AppointmentStatus.pending;
+
   bool get isActive =>
       status == AppointmentStatus.pending ||
       status == AppointmentStatus.confirmed;
@@ -24,6 +26,11 @@ class Appointment {
   bool get isUpcoming =>
       isActive &&
       startsAt.isAfter(DateTime.now().subtract(const Duration(hours: 1)));
+
+  bool get countsAsVisit =>
+      (status == AppointmentStatus.confirmed ||
+          status == AppointmentStatus.completed) &&
+      !startsAt.isAfter(DateTime.now());
 
   Appointment copyWith({
     AppointmentStatus? status,

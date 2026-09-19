@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +8,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/data/local_database.dart';
 import '../../../core/firebase/firebase_providers.dart';
 import '../../../core/firebase/firebase_seed.dart';
+import '../../priests/domain/priest.dart';
 import '../domain/app_user.dart';
 
 class AuthException implements Exception {
@@ -72,6 +74,7 @@ class AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? fatherId,
   }) async {
     if (_cloud) {
       final name = username.trim().toLowerCase();
@@ -92,21 +95,53 @@ class AuthRepository {
             fullName: fullName.trim(),
             username: username.trim(),
             email: mail,
+            fatherId: fatherId,
           );
         } catch (error) {
           await credential.user?.delete();
           if (error is AuthException) rethrow;
-          throw AuthException(_mapAuthError(
-            error is FirebaseAuthException
-                ? error
-                : FirebaseAuthException(code: 'internal-error'),
-          ));
+          throw AuthException(
+            _mapAuthError(
+              error is FirebaseAuthException
+                  ? error
+                  : FirebaseAuthException(code: 'internal-error'),
+            ),
+          );
         }
       } on FirebaseAuthException catch (error) {
         throw AuthException(_mapAuthError(error));
       }
     }
-    return _localSignup(fullName, username, email, password);
+    return _localSignup(fullName, username, email, password, fatherId);
+  }
+
+  Future<AppUser> setFather(String fatherId) async {
+    final id = fatherId.trim();
+    if (id.isEmpty) {
+      throw const AuthException(AppStrings.chooseFatherError);
+    }
+    if (_cloud) {
+      final firebaseUser = _auth!.currentUser;
+      if (firebaseUser == null) {
+        throw const AuthException(AppStrings.loginFailed);
+      }
+      final current = await _ensureProfile(firebaseUser);
+      final updated = current.copyWith(fatherId: id);
+      await _store!.collection('users').doc(current.id).set({
+        'fatherId': id,
+      }, SetOptions(merge: true));
+      return updated;
+    }
+    final user = currentUser();
+    if (user == null) {
+      throw const AuthException(AppStrings.loginFailed);
+    }
+    final updated = user.copyWith(fatherId: id);
+    await _db.saveUsers([
+      for (final item in _db.users())
+        if (item.id == user.id) updated else item,
+    ]);
+    return updated;
   }
 
   Future<AppUser> loginWithGoogle() async {
@@ -146,6 +181,88 @@ class AuthRepository {
     await _db.setSession(null, remember: false);
   }
 
+  Future<String> createUserAsAdmin({
+    required String fullName,
+    required String email,
+    required String password,
+    required UserRole role,
+    String? priestId,
+  }) async {
+    final mail = email.trim().toLowerCase();
+    if (!_cloud) {
+      final users = _db.users();
+      if (users.any((user) => user.email.toLowerCase() == mail)) {
+        throw const AuthException(AppStrings.emailTaken);
+      }
+      var username = mail.split('@').first;
+      if (users.any((user) => user.username.toLowerCase() == username)) {
+        username = '${username}_${DateTime.now().millisecondsSinceEpoch}';
+      }
+      final user = AppUser(
+        id: 'u_${DateTime.now().millisecondsSinceEpoch}',
+        fullName: fullName.trim(),
+        username: username,
+        email: mail,
+        password: password,
+        role: role,
+        priestId: priestId,
+      );
+      await _db.saveUsers([...users, user]);
+      return user.id;
+    }
+    final app = await _secondaryApp();
+    final secondary = FirebaseAuth.instanceFor(app: app);
+    try {
+      final credential = await secondary.createUserWithEmailAndPassword(
+        email: mail,
+        password: password,
+      );
+      final uid = credential.user!.uid;
+      await credential.user!.updateDisplayName(fullName.trim());
+      try {
+        var username = mail.split('@').first;
+        if (username.isEmpty) username = uid.substring(0, 8);
+        final taken = await _store!
+            .collection('usernames')
+            .doc(username.toLowerCase())
+            .get();
+        if (taken.exists && taken.data()?['uid'] != uid) {
+          username = '${username}_${uid.substring(0, 6)}';
+        }
+        final user = AppUser(
+          id: uid,
+          fullName: fullName.trim(),
+          username: username,
+          email: mail,
+          role: role,
+          priestId: priestId,
+        );
+        await _store.collection('users').doc(uid).set(user.toJson());
+        await _store.collection('usernames').doc(username.toLowerCase()).set({
+          'uid': uid,
+          'email': mail,
+        });
+      } catch (error) {
+        await credential.user?.delete();
+        await secondary.signOut();
+        rethrow;
+      }
+      await secondary.signOut();
+      return uid;
+    } on FirebaseAuthException catch (error) {
+      await secondary.signOut();
+      throw AuthException(_mapAuthError(error));
+    }
+  }
+
+  Future<FirebaseApp> _secondaryApp() async {
+    const name = 'ghofranAdmin';
+    for (final app in Firebase.apps) {
+      if (app.name == name) return app;
+    }
+    return Firebase.initializeApp(name: name, options: Firebase.app().options);
+  }
+
   Future<void> _setPersistence(bool remember) async {
     if (!kIsWeb || _auth == null) return;
     await _auth.setPersistence(
@@ -156,7 +273,10 @@ class AuthRepository {
   Future<String> _resolveEmail(String identifier) async {
     final query = identifier.trim();
     if (query.contains('@')) return query;
-    final doc = await _store!.collection('usernames').doc(query.toLowerCase()).get();
+    final doc = await _store!
+        .collection('usernames')
+        .doc(query.toLowerCase())
+        .get();
     final email = doc.data()?['email'] as String?;
     if (!doc.exists || email == null) {
       throw const AuthException(AppStrings.loginFailed);
@@ -177,11 +297,12 @@ class AuthRepository {
     final doc = await store.collection('users').doc(firebaseUser.uid).get();
     if (doc.exists) {
       await seedFirestoreIfNeeded();
-      return AppUser.fromJson({
+      final user = AppUser.fromJson({
         ...doc.data()!,
         'id': firebaseUser.uid,
         'email': firebaseUser.email ?? doc.data()!['email'],
       });
+      return _linkRoles(user);
     }
     final email = firebaseUser.email ?? '';
     var username = email.split('@').first;
@@ -200,7 +321,70 @@ class AuthRepository {
       email: email,
     );
     await seedFirestoreIfNeeded();
-    return created;
+    return _linkRoles(created);
+  }
+
+  Future<AppUser> _linkRoles(AppUser user) async {
+    final asAdmin = await _linkAdmin(user);
+    if (asAdmin.isAdmin) return asAdmin;
+    return _linkPriest(asAdmin);
+  }
+
+  Future<AppUser> _linkAdmin(AppUser user) async {
+    final store = _store;
+    if (store == null || user.isAdmin || !isSeedAdminEmail(user.email)) {
+      return user;
+    }
+    final linked = AppUser(
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      role: UserRole.admin,
+    );
+    await store
+        .collection('users')
+        .doc(user.id)
+        .set(linked.toJson(), SetOptions(merge: true));
+    return linked;
+  }
+
+  Future<AppUser> _linkPriest(AppUser user) async {
+    final store = _store;
+    if (store == null || user.isAdmin) return user;
+    await seedFirestoreIfNeeded();
+    var match = priestByEmail(user.email);
+    if (match == null) {
+      final snap = await store
+          .collection('priests')
+          .where('email', isEqualTo: user.email.trim().toLowerCase())
+          .limit(1)
+          .get();
+      if (snap.docs.isNotEmpty) {
+        match = Priest.fromJson({
+          'id': snap.docs.first.id,
+          ...snap.docs.first.data(),
+        });
+      }
+    }
+    if (match == null) return user;
+    final linked = AppUser(
+      id: user.id,
+      fullName: user.fullName,
+      username: user.username,
+      email: user.email,
+      role: UserRole.priest,
+      priestId: match.id,
+    );
+    await store
+        .collection('users')
+        .doc(user.id)
+        .set(linked.toJson(), SetOptions(merge: true));
+    await store.collection('priests').doc(match.id).set({
+      'uid': user.id,
+      'email': match.email,
+    }, SetOptions(merge: true));
+    return linked;
   }
 
   Future<AppUser> _writeProfile({
@@ -208,12 +392,14 @@ class AuthRepository {
     required String fullName,
     required String username,
     required String email,
+    String? fatherId,
   }) async {
     final user = AppUser(
       id: uid,
       fullName: fullName,
       username: username,
       email: email,
+      fatherId: fatherId,
     );
     final store = _store;
     if (store == null) {
@@ -224,7 +410,7 @@ class AuthRepository {
       'uid': uid,
       'email': email,
     });
-    return user;
+    return _linkRoles(user);
   }
 
   Future<AppUser> _localLogin(
@@ -251,6 +437,7 @@ class AuthRepository {
     String username,
     String email,
     String password,
+    String? fatherId,
   ) async {
     final users = _db.users();
     if (users.any((u) => u.username == username.trim())) {
@@ -265,6 +452,8 @@ class AuthRepository {
       username: username.trim(),
       email: email.trim(),
       password: password,
+      role: isSeedAdminEmail(email) ? UserRole.admin : UserRole.member,
+      fatherId: fatherId,
     );
     await _db.saveUsers([...users, user]);
     await _db.setSession(user.id, remember: true);
@@ -291,8 +480,8 @@ class AuthRepository {
       'popup-closed-by-user' ||
       'cancelled-popup-request' ||
       'web-context-cancelled' => AppStrings.googleMockNotice,
-      'operation-not-allowed' || 'unauthorized-domain' =>
-        AppStrings.firebaseNotReady,
+      'operation-not-allowed' ||
+      'unauthorized-domain' => AppStrings.firebaseNotReady,
       _ => error.message ?? AppStrings.loginFailed,
     };
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/motion/enter.dart';
@@ -14,6 +13,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/priest_avatar.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../booking/presentation/booking_nav.dart';
 import '../../priests/data/priest_repository.dart';
 import '../data/appointment_repository.dart';
 import '../domain/appointment.dart';
@@ -141,7 +141,7 @@ class AppointmentDetailsScreen extends ConsumerWidget {
             TonalButton(
               label: AppStrings.rescheduleAppointment,
               onPressed: () =>
-                  context.push('/priests?rescheduleId=${appointment.id}'),
+                  openMemberBooking(context, ref, rescheduleId: appointment.id),
             ),
             const SizedBox(height: AppSpacing.sm),
             TonalButton(
@@ -161,7 +161,10 @@ class AppointmentDetailsScreen extends ConsumerWidget {
         Icon(icon, color: AppColors.primary600, size: 18),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

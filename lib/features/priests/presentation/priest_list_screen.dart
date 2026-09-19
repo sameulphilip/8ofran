@@ -11,7 +11,9 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/booking_stepper.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/priest_avatar.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
+import '../../booking/presentation/booking_nav.dart';
 import '../data/priest_repository.dart';
 
 class PriestListScreen extends ConsumerWidget {
@@ -21,8 +23,31 @@ class PriestListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider);
+    if (user?.hasFather == true) {
+      final priest = ref.watch(priestRepositoryProvider).byId(user!.fatherId!);
+      final loading = ref.watch(priestsStreamProvider).isLoading;
+      if (priest == null && loading) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      if (priest != null && priest.isAvailable) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          openMemberBooking(
+            context,
+            ref,
+            rescheduleId: rescheduleId,
+            replace: true,
+          );
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+    }
+
     final priestsAsync = ref.watch(priestsStreamProvider);
-    final priests = priestsAsync.value ?? const [];
+    final priests = (priestsAsync.value ?? const [])
+        .where((priest) => priest.isAvailable)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -119,9 +144,11 @@ class PriestListScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                AppStrings.priestRole,
-                                style: TextStyle(
+                              Text(
+                                priest.churchName.isEmpty
+                                    ? AppStrings.priestRole
+                                    : priest.churchName,
+                                style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13,
                                 ),

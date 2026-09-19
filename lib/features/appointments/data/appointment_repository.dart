@@ -7,6 +7,7 @@ import '../../../core/data/local_database.dart';
 import '../../../core/firebase/firebase_providers.dart';
 import '../../../core/utils/slot_id.dart';
 import '../../notifications/data/notification_repository.dart';
+import '../../priests/domain/priest.dart';
 import '../domain/appointment.dart';
 
 class AppointmentRepository {
@@ -50,7 +51,11 @@ class AppointmentRepository {
     );
   }
 
-  bool isSlotTaken(String slotId, {String? ignoreId, List<Appointment>? items}) {
+  bool isSlotTaken(
+    String slotId, {
+    String? ignoreId,
+    List<Appointment>? items,
+  }) {
     final source = items ?? all();
     return source.any((a) => a.id == slotId && a.isActive && a.id != ignoreId);
   }
@@ -60,21 +65,10 @@ class AppointmentRepository {
     required DateTime date,
     String? ignoreAppointmentId,
     List<Appointment>? items,
+    Priest? priest,
   }) {
     final slots = <DateTime>[];
-    var cursor = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      AppConstants.firstSlotHour,
-    );
-    final last = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      AppConstants.lastSlotHour,
-    );
-    while (!cursor.isAfter(last)) {
+    for (final cursor in _slotTimes(date, priest)) {
       final id = SlotId.build(
         priestId: priestId,
         date: date,
@@ -83,7 +77,6 @@ class AppointmentRepository {
       if (!isSlotTaken(id, ignoreId: ignoreAppointmentId, items: items)) {
         slots.add(cursor);
       }
-      cursor = cursor.add(const Duration(minutes: AppConstants.slotMinutes));
     }
     return slots;
   }
@@ -93,22 +86,11 @@ class AppointmentRepository {
     required DateTime date,
     String? ignoreAppointmentId,
     List<Appointment>? items,
+    Priest? priest,
   }) {
     final slots = <DaySlot>[];
-    var cursor = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      AppConstants.firstSlotHour,
-    );
-    final last = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      AppConstants.lastSlotHour,
-    );
     final now = DateTime.now();
-    while (!cursor.isAfter(last)) {
+    for (final cursor in _slotTimes(date, priest)) {
       final id = SlotId.build(
         priestId: priestId,
         date: date,
@@ -121,9 +103,20 @@ class AppointmentRepository {
           past: cursor.isBefore(now),
         ),
       );
-      cursor = cursor.add(const Duration(minutes: AppConstants.slotMinutes));
     }
     return slots;
+  }
+
+  Iterable<DateTime> _slotTimes(DateTime date, Priest? priest) sync* {
+    final first = priest?.firstSlotHour ?? AppConstants.firstSlotHour;
+    final last = priest?.lastSlotHour ?? AppConstants.lastSlotHour;
+    final step = priest?.slotMinutes ?? AppConstants.slotMinutes;
+    var cursor = DateTime(date.year, date.month, date.day, first);
+    final end = DateTime(date.year, date.month, date.day, last);
+    while (!cursor.isAfter(end)) {
+      yield cursor;
+      cursor = cursor.add(Duration(minutes: step));
+    }
   }
 
   Future<Appointment> book({
@@ -132,6 +125,7 @@ class AppointmentRepository {
     required DateTime startsAt,
     String notes = '',
     String? rescheduleId,
+    String? priestUid,
   }) async {
     final id = SlotId.build(
       priestId: priestId,
@@ -143,7 +137,7 @@ class AppointmentRepository {
       userId: userId,
       priestId: priestId,
       startsAt: startsAt,
-      status: AppointmentStatus.confirmed,
+      status: AppointmentStatus.pending,
       notes: notes,
     );
 
@@ -189,10 +183,59 @@ class AppointmentRepository {
 
     await _notifications.add(
       userId: userId,
-      title: AppStrings.bookingConfirmedTitle,
-      body: AppStrings.bookingConfirmedBody,
+      title: AppStrings.bookingRequestedTitle,
+      body: AppStrings.bookingRequestedBody,
     );
+    if (priestUid != null && priestUid.isNotEmpty && priestUid != userId) {
+      await _notifications.add(
+        userId: priestUid,
+        title: AppStrings.bookingRequestPriestTitle,
+        body: AppStrings.bookingRequestPriestBody,
+      );
+    }
     return appointment;
+  }
+
+  Future<void> respond({
+    required String appointmentId,
+    required bool approve,
+  }) async {
+    Appointment? appointment;
+    if (_cloud) {
+      final snap = await _store!
+          .collection('appointments')
+          .doc(appointmentId)
+          .get();
+      if (!snap.exists) return;
+      appointment = _fromDoc(snap);
+    } else {
+      appointment = byId(appointmentId);
+    }
+    if (appointment == null || !appointment.isPending) return;
+
+    final status = approve
+        ? AppointmentStatus.confirmed
+        : AppointmentStatus.cancelled;
+    if (_cloud) {
+      await _store!.collection('appointments').doc(appointmentId).update({
+        'status': status.name,
+      });
+    } else {
+      await _db.saveAppointments([
+        for (final item in all())
+          if (item.id == appointmentId) item.copyWith(status: status) else item,
+      ]);
+    }
+
+    await _notifications.add(
+      userId: appointment.userId,
+      title: approve
+          ? AppStrings.bookingConfirmedTitle
+          : AppStrings.bookingRejectedTitle,
+      body: approve
+          ? AppStrings.bookingConfirmedBody
+          : AppStrings.bookingRejectedBody,
+    );
   }
 
   Future<void> cancel(String appointmentId) async {
@@ -208,7 +251,9 @@ class AppointmentRepository {
       appointment = byId(appointmentId);
     }
     if (appointment == null) return;
-    _ensureWindow(appointment.startsAt);
+    if (!appointment.isPending) {
+      _ensureWindow(appointment.startsAt);
+    }
 
     if (_cloud) {
       await _store!.collection('appointments').doc(appointmentId).update({
