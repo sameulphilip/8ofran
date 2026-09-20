@@ -24,6 +24,9 @@ const seedPriests = [
     churchId: 'ch_alex',
     churchName: 'الإسكندرية',
     email: 'mina@ghofran.app',
+    firstSlotHour: 9,
+    lastSlotHour: 12,
+    offWeekdays: {DateTime.friday},
   ),
   Priest(
     id: 'p_dawoud',
@@ -31,6 +34,7 @@ const seedPriests = [
     churchId: 'ch_minya',
     churchName: 'المنيا',
     email: 'dawoud@ghofran.app',
+    isAvailable: false,
   ),
   Priest(
     id: 'p_kirollos',
@@ -45,6 +49,9 @@ const seedPriests = [
     churchId: 'ch_tanta',
     churchName: 'طنطا',
     email: 'bishoy@ghofran.app',
+    firstSlotHour: 16,
+    lastSlotHour: 20,
+    slotMinutes: 45,
   ),
 ];
 

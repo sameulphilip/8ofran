@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -31,7 +31,12 @@ import 'transitions.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(authControllerProvider, (_, _) => refresh.value++);
+  ref.listen(authControllerProvider, (previous, next) {
+    if (previous?.id == next?.id) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      refresh.value++;
+    });
+  });
   ref.onDispose(refresh.dispose);
 
   return GoRouter(

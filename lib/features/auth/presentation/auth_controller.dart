@@ -7,7 +7,14 @@ class AuthController extends Notifier<AppUser?> {
   @override
   AppUser? build() {
     final repo = ref.watch(authRepositoryProvider);
-    final sub = repo.authState().listen((user) => state = user);
+    final sub = repo.authState().listen((user) {
+      if (state?.id == user?.id &&
+          state?.role == user?.role &&
+          state?.fatherId == user?.fatherId) {
+        return;
+      }
+      state = user;
+    });
     ref.onDispose(sub.cancel);
     return repo.currentUser();
   }

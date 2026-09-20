@@ -6,6 +6,7 @@ import '../../../core/utils/app_nav.dart';
 import '../../../core/utils/url_actions.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/brand_mark.dart';
+import '../../../core/widgets/powered_by.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -55,6 +56,8 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          const Center(child: PoweredByMark(onDark: false)),
         ],
       ),
     );

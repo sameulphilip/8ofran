@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +14,10 @@ import '../../../core/widgets/form_error_banner.dart';
 import '../../../core/widgets/google_sign_in_button.dart';
 import '../../../core/widgets/or_divider.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/powered_by.dart';
 import '../../../core/widgets/shake.dart';
 import '../data/auth_repository.dart';
 import 'auth_controller.dart';
-import 'tester_picker.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -298,18 +297,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 16),
                         GoogleSignInButton(onPressed: _busy ? null : _google),
                         const SizedBox(height: 16),
-                        if (kDebugMode) ...[
-                          TesterPicker(
-                            onSelect: (tester) {
-                              setState(() {
-                                _userController.text = tester.email;
-                                _passwordController.text = tester.password;
-                                _errors.clear();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
                         Wrap(
                           alignment: WrapAlignment.center,
                           children: [
@@ -328,6 +315,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: AppColors.disabled),
                         ),
+                        const SizedBox(height: 22),
+                        const Center(child: PoweredByMark()),
                       ],
                     ),
                   ),

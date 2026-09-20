@@ -100,20 +100,24 @@ class _SplashScreenState extends State<SplashScreen> {
     final controller = _controller;
     return Scaffold(
       backgroundColor: AppColors.splash,
-      body: context.reduceMotion
-          ? const Center(child: BrandLogo(height: 240))
-          : controller != null && controller.value.isInitialized
-          ? SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: controller.value.size.width,
-                  height: controller.value.size.height,
-                  child: VideoPlayer(controller),
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _goNext,
+        child: context.reduceMotion
+            ? const Center(child: BrandLogo(height: 240))
+            : controller != null && controller.value.isInitialized
+            ? SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: controller.value.size.width,
+                    height: controller.value.size.height,
+                    child: VideoPlayer(controller),
+                  ),
                 ),
-              ),
-            )
-          : const SizedBox.expand(),
+              )
+            : const SizedBox.expand(),
+      ),
     );
   }
 }

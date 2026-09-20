@@ -8,6 +8,7 @@ import '../../../core/motion/enter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/brand_logo.dart';
+import '../../../core/widgets/powered_by.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
 import '../../booking/presentation/booking_nav.dart';
@@ -173,6 +174,8 @@ class AppDrawer extends ConsumerWidget {
                   ],
                 ),
               ),
+              const PoweredByMark(),
+              const SizedBox(height: 6),
               Text(
                 'v0.1.0',
                 style: GoogleFonts.cairo(

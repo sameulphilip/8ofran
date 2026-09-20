@@ -205,6 +205,7 @@ class AppStrings {
   static const testersTitle = 'حسابات التجربة';
   static const testersPasswordHint = 'كلمة المرور لكل الحسابات: 12345678';
   static const testerAdmin = 'إدارة';
+  static const testerMember = 'مستخدم';
   static const testerPriestSchedule = 'كاهن بجدول';
   static const testerPriestMorning = 'كاهن صباحي';
   static const testerUpcoming = 'موعد قادم';
@@ -213,6 +214,8 @@ class AppStrings {
   static const testerRule = 'قانون روحي';
   static const testerLocked = 'إلغاء مقفول';
   static const comingSoon = 'قريباً';
+  static const poweredBy = 'Powered by';
+  static const studioName = 'Cowdlly';
 
   static const contactPhone = 'اتصال';
   static const contactWhatsApp = 'واتساب';

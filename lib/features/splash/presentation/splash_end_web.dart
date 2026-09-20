@@ -28,7 +28,18 @@ void bindHtmlSplashEnd(void Function() onDone) {
   video.addEventListener('error', onError.toJS);
   video.muted = true;
   video.play();
-  Future<void>.delayed(const Duration(seconds: 14), finish);
+  video.addEventListener('click', ((web.Event _) => finish()).toJS);
+  Future<void>.delayed(const Duration(seconds: 8), finish);
+  void pollRemoved() {
+    if (done) return;
+    if (web.document.getElementById('ghofran-splash') == null) {
+      finish();
+      return;
+    }
+    Future<void>.delayed(const Duration(milliseconds: 200), pollRemoved);
+  }
+
+  pollRemoved();
 }
 
 void removeHtmlSplash() {

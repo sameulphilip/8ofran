@@ -8,6 +8,7 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/google_sign_in_button.dart';
 import '../../../core/widgets/or_divider.dart';
+import '../../../core/widgets/powered_by.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../data/auth_repository.dart';
 import '../../care/data/care_repository.dart';
@@ -232,6 +233,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
+                const Center(child: PoweredByMark(onDark: false)),
               ],
             ),
           ),

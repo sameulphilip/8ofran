@@ -28,40 +28,24 @@ class LocalDatabase {
   static const _churchesKey = 'churches';
   static const _careKey = 'pastoral_care';
   static const _canonsKey = 'spiritual_canons';
-  static const _testersKey = 'seeded_testers_v2';
+  static const _testersKey = 'seeded_testers_v3';
   static const _remindersKey = 'reminders_enabled';
 
   Future<void> seedIfNeeded() async {
     if (!(_prefs.getBool(_seededKey) ?? false)) {
-      final world = TesterWorld();
-      await _writeJson(
-        _usersKey,
-        world.users().map((user) => user.toLocalJson()).toList(),
-      );
-      await _writeJson(
-        _priestsKey,
-        world.priests().map((priest) => priest.toJson()).toList(),
-      );
-      await _writeJson(
-        _churchesKey,
-        seedChurches.map((church) => church.toJson()).toList(),
-      );
-      await _writeJson(
-        _appointmentsKey,
-        world.appointments().map((item) => item.toJson()).toList(),
-      );
-      await saveCares(world.cares());
-      await saveCanons(world.canons());
-      for (final entry in world.notifications().entries) {
-        await _writeJson(
-          '${_notificationsKey}_${entry.key}',
-          entry.value.map((item) => item.toJson()).toList(),
-        );
-      }
+      await saveUsers([
+        TesterCatalog.admin.toUser(),
+        TesterCatalog.member.toUser(),
+      ]);
+      await savePriests(seedPriests);
+      await saveChurches(seedChurches);
+      await saveAppointments(const []);
+      await saveCares(const []);
+      await saveCanons(const []);
       await _prefs.setBool(_seededKey, true);
       await _prefs.setBool(_testersKey, true);
     }
-    await _ensureTestersCatalog();
+    await _purgeLocalTesters();
   }
 
   List<AppUser> users() => _readList(_usersKey, AppUser.fromJson);
@@ -140,38 +124,27 @@ class LocalDatabase {
     ]);
   }
 
-  Future<void> _ensureTestersCatalog() async {
+  Future<void> _purgeLocalTesters() async {
     if (churches().isEmpty) {
       await saveChurches(seedChurches);
     }
-    if (_prefs.getBool(_testersKey) ?? false) return;
-    final world = TesterWorld();
-    final known = {for (final user in users()) user.email.toLowerCase(): user};
-    var usersChanged = false;
-    for (final tester in TesterCatalog.logins) {
-      final fresh = tester.toUser();
-      final existing = known[tester.email.toLowerCase()];
-      if (existing == null) {
-        known[tester.email.toLowerCase()] = fresh;
-        usersChanged = true;
-        continue;
-      }
-      if (existing.fatherId != fresh.fatherId ||
-          existing.priestId != fresh.priestId ||
-          existing.role != fresh.role) {
-        known[tester.email.toLowerCase()] = existing.copyWith(
-          role: fresh.role,
-          priestId: fresh.priestId,
-          fatherId: fresh.fatherId,
-        );
-        usersChanged = true;
-      }
+    if (priests().isEmpty) await savePriests(seedPriests);
+    final kept = [
+      for (final user in users())
+        if (!TesterCatalog.isDisposableEmail(user.email)) user,
+    ];
+    if (!kept.any(
+      (user) => user.email.toLowerCase() == TesterCatalog.member.email,
+    )) {
+      kept.add(TesterCatalog.member.toUser());
     }
-    if (usersChanged) await saveUsers(known.values.toList());
-    if (priests().isEmpty) await savePriests(world.priests());
-    if (appointments().isEmpty) await saveAppointments(world.appointments());
-    if (cares().isEmpty) await saveCares(world.cares());
-    if (canons().isEmpty) await saveCanons(world.canons());
+    if (kept.length != users().length) {
+      await saveUsers(kept);
+    }
+    final session = sessionUserId();
+    if (session != null && !kept.any((user) => user.id == session)) {
+      await setSession(null, remember: false);
+    }
     await _prefs.setBool(_testersKey, true);
   }
 

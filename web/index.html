@@ -53,10 +53,20 @@
       var v = document.getElementById('ghofran-splash');
       if (!v) return;
       v.muted = true;
-      var play = function () { v.play().catch(function () {}); };
+      var gone = false;
+      var hide = function () {
+        if (gone || !v.parentNode) return;
+        gone = true;
+        v.remove();
+      };
+      var play = function () { v.play().catch(function () { hide(); }); };
       play();
       v.addEventListener('canplay', play);
       v.addEventListener('loadeddata', play);
+      v.addEventListener('ended', hide);
+      v.addEventListener('error', hide);
+      v.addEventListener('click', hide);
+      setTimeout(hide, 8000);
     })();
   </script>
   <script src="flutter_bootstrap.js" async></script>

@@ -21,6 +21,13 @@ class UrlActions {
     return launchUrl(Uri.parse('mailto:${AppConstants.supportEmail}'));
   }
 
+  static Future<void> openStudio() {
+    return launchUrl(
+      Uri.parse(AppConstants.studioUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
   static Future<void> whatsAppSupport() {
     final uri = Uri.parse(
       'https://wa.me/${AppConstants.supportPhoneE164.replaceAll('+', '')}',

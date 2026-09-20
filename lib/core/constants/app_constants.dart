@@ -15,6 +15,7 @@ class AppConstants {
   static const reminderLeadDays = [2, 1];
   static const cairoTz = 'Africa/Cairo';
   static const adminEmail = 'admin@ghofran.app';
+  static const studioUrl = 'https://cowdlly.com/';
   static const slotMinuteOptions = [15, 20, 30, 45, 60];
   static const hourOptions = [
     6,
