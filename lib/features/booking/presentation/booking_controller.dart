@@ -5,6 +5,7 @@ import '../../appointments/data/appointment_repository.dart';
 import '../../appointments/domain/appointment.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../care/data/care_repository.dart';
+import '../../care/data/local_reminder_service.dart';
 import '../../care/data/reminder_dispatcher.dart';
 import '../../notifications/data/notification_repository.dart';
 import '../../notifications/domain/app_notification.dart';
@@ -34,7 +35,7 @@ class BookingController extends Notifier<BookingDraft> {
     );
   }
 
-  Future<Appointment> confirm({String notes = ''}) async {
+  Future<Appointment> confirm({String notes = '', bool remind = true}) async {
     final user = ref.read(authControllerProvider);
     final draft = state;
     if (user == null || !draft.canConfirm) {
@@ -52,6 +53,7 @@ class BookingController extends Notifier<BookingDraft> {
           notes: notes,
           rescheduleId: draft.rescheduleId,
           priestUid: draft.priest!.uid,
+          remind: remind,
         );
     await ref
         .read(careRepositoryProvider)
@@ -100,13 +102,26 @@ final unreadCountProvider = Provider<int>((ref) {
 
 final reminderSyncProvider = FutureProvider<void>((ref) async {
   final user = ref.watch(authControllerProvider);
-  if (user == null || user.isPriest) return;
+  if (user == null) return;
   final db = ref.watch(localDatabaseProvider);
+  final enabled = db.remindersEnabled();
+  final appointments = [
+    for (final item in ref.watch(allAppointmentsProvider))
+      if (item.userId == user.id) item,
+  ];
+  if (!enabled) {
+    await localReminderService.cancelAll();
+    return;
+  }
+  if (user.isPriest || user.isAdmin) return;
   final care = await ref.watch(myCareProvider.future);
   await ReminderDispatcher(ref.read(notificationRepositoryProvider)).sync(
     userId: user.id,
-    appointments: ref.watch(allAppointmentsProvider),
+    appointments: appointments,
     care: care,
-    enabled: db.remindersEnabled(),
+    enabled: true,
   );
+  for (final appointment in appointments) {
+    await localReminderService.scheduleAppointment(appointment);
+  }
 });

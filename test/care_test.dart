@@ -27,6 +27,37 @@ void main() {
     expect(care.daysSince(DateTime.now(), null), -1);
   });
 
+  test('flock filters split new, regular, and overdue members', () {
+    final now = DateTime(2026, 3, 1);
+    expect(
+      matchesFlockFilter(
+        filter: FlockFilter.fresh,
+        care: care,
+        now: now,
+        last: null,
+      ),
+      isTrue,
+    );
+    expect(
+      matchesFlockFilter(
+        filter: FlockFilter.regular,
+        care: care,
+        now: now,
+        last: DateTime(2026, 2, 20),
+      ),
+      isTrue,
+    );
+    expect(
+      matchesFlockFilter(
+        filter: FlockFilter.overdue,
+        care: care,
+        now: now,
+        last: DateTime(2026, 1, 1),
+      ),
+      isTrue,
+    );
+  });
+
   test('last visit uses past confirmed appointments only', () {
     final now = DateTime(2026, 3, 1, 12);
     final items = [
@@ -51,6 +82,13 @@ void main() {
         startsAt: DateTime(2026, 4, 1, 17),
         status: AppointmentStatus.confirmed,
       ),
+      Appointment(
+        id: 'a4',
+        userId: 'u1',
+        priestId: 'p_youhanna',
+        startsAt: DateTime(2026, 2, 20, 17),
+        status: AppointmentStatus.completed,
+      ),
     ];
     expect(
       lastVisitFor(
@@ -59,7 +97,7 @@ void main() {
         appointments: items,
         now: now,
       ),
-      DateTime(2026, 1, 10, 17),
+      DateTime(2026, 2, 20, 17),
     );
   });
 }

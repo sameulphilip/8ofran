@@ -12,6 +12,8 @@ import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/priest_avatar.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/domain/church.dart';
 import '../../booking/presentation/booking_controller.dart';
 import '../../booking/presentation/booking_nav.dart';
 import '../../priests/data/priest_repository.dart';
@@ -42,6 +44,9 @@ class AppointmentDetailsScreen extends ConsumerWidget {
     final priest = ref
         .watch(priestRepositoryProvider)
         .byId(appointment.priestId);
+    final church = priest == null
+        ? null
+        : findChurch(ref.watch(churchesProvider), priest.churchId);
     if (priest == null) {
       return Scaffold(
         body: Center(
@@ -104,12 +109,25 @@ class AppointmentDetailsScreen extends ConsumerWidget {
                   DateFormatters.time(appointment.startsAt),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                _row(Icons.location_on_outlined, priest.churchName),
+                _row(
+                  Icons.location_on_outlined,
+                  church?.placeLabel ?? priest.churchName,
+                ),
+                if (church != null && church.name != church.placeLabel) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _row(Icons.church_outlined, church.name),
+                ],
                 TextButton.icon(
-                  onPressed: UrlActions.openMap,
+                  onPressed: () => UrlActions.openMap(church?.mapQuery),
                   icon: const Icon(Icons.map_outlined, size: 18),
                   label: const Text(AppStrings.openMaps),
                 ),
+                if (church?.hasPhone ?? false)
+                  TextButton.icon(
+                    onPressed: () => UrlActions.callPhone(church!.phone),
+                    icon: const Icon(Icons.call_outlined, size: 18),
+                    label: const Text(AppStrings.callChurch),
+                  ),
               ],
             ),
           ).enter(context),
@@ -127,6 +145,23 @@ class AppointmentDetailsScreen extends ConsumerWidget {
                 : appointment.notes,
             style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
           ),
+          if (appointment.rejectReason.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              AppStrings.rejectReasonTitle,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              appointment.rejectReason,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
           if (appointment.isActive) ...[
             const SizedBox(height: AppSpacing.xxl),
             TonalButton(
@@ -135,6 +170,8 @@ class AppointmentDetailsScreen extends ConsumerWidget {
               onPressed: () => UrlActions.addToCalendar(
                 startsAt: appointment.startsAt,
                 priestName: priest.name,
+                location: church?.placeLabel ?? priest.churchName,
+                slotMinutes: priest.slotMinutes,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),

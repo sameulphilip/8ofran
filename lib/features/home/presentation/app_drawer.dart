@@ -83,6 +83,20 @@ class AppDrawer extends ConsumerWidget {
                         AppStrings.managePriests,
                         '/admin/priests',
                       ),
+                      _item(
+                        context,
+                        3,
+                        Icons.people_outline,
+                        AppStrings.adminMembers,
+                        '/admin/members',
+                      ),
+                      _item(
+                        context,
+                        4,
+                        Icons.swap_horiz_rounded,
+                        AppStrings.fatherTransfers,
+                        '/priest/transfers',
+                      ),
                     ] else if (ref.watch(authControllerProvider)?.isPriest ??
                         false) ...[
                       _item(
@@ -105,6 +119,13 @@ class AppDrawer extends ConsumerWidget {
                         Icons.groups_outlined,
                         AppStrings.flock,
                         '/priest/flock',
+                      ),
+                      _item(
+                        context,
+                        4,
+                        Icons.swap_horiz_rounded,
+                        AppStrings.fatherTransfers,
+                        '/priest/transfers',
                       ),
                     ] else ...[
                       _item(
@@ -139,6 +160,15 @@ class AppDrawer extends ConsumerWidget {
                         AppStrings.infoAndGuides,
                         '/info',
                       ),
+                      if (ref.watch(authControllerProvider)?.hasFather ??
+                          false)
+                        _item(
+                          context,
+                          5,
+                          Icons.swap_horiz_rounded,
+                          AppStrings.changeFather,
+                          '/change-father',
+                        ),
                     ],
                     _item(
                       context,

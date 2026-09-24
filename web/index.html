@@ -1,72 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="غفران — حجز موعد هادئ مع أب روحي">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="غفران">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>غفران</title>
   <link rel="manifest" href="manifest.json">
   <style>
     html, body { background-color: #050D1C; height: 100%; margin: 0; overflow: hidden; }
-    #ghofran-splash {
+    #ghofran-splash-root {
       position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: #050D1C;
+    }
+    #ghofran-splash {
+      position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
       background: #050D1C;
-      z-index: 99999;
     }
   </style>
 </head>
 <body>
-  <video id="ghofran-splash" autoplay muted playsinline preload="auto">
-    <source src="ghofran_splash.mp4" type="video/mp4">
-  </video>
+  <div id="ghofran-splash-root">
+    <video id="ghofran-splash" autoplay muted playsinline preload="auto">
+      <source src="ghofran_splash.mp4" type="video/mp4">
+    </video>
+  </div>
   <script>
     (function () {
+      var root = document.getElementById('ghofran-splash-root');
       var v = document.getElementById('ghofran-splash');
-      if (!v) return;
+      if (!v || !root) return;
       v.muted = true;
-      var gone = false;
-      var hide = function () {
-        if (gone || !v.parentNode) return;
-        gone = true;
-        v.remove();
+      var marked = false;
+      var markDone = function () {
+        if (marked) return;
+        marked = true;
+        v.setAttribute('data-splash-done', '1');
+        try { v.pause(); } catch (e) {}
+        tryHide();
       };
-      var play = function () { v.play().catch(function () { hide(); }); };
+      var tryHide = function () {
+        if (!marked) return;
+        if (document.documentElement.getAttribute('data-flutter-ready') !== '1') {
+          return;
+        }
+        if (root && root.parentNode) root.remove();
+      };
+      var readyObserver = new MutationObserver(tryHide);
+      readyObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-flutter-ready']
+      });
+      var play = function () { v.play().catch(function () { markDone(); }); };
       play();
       v.addEventListener('canplay', play);
       v.addEventListener('loadeddata', play);
-      v.addEventListener('ended', hide);
-      v.addEventListener('error', hide);
-      v.addEventListener('click', hide);
-      setTimeout(hide, 8000);
+      v.addEventListener('ended', markDone);
+      v.addEventListener('error', markDone);
+      v.addEventListener('click', markDone);
+      setTimeout(markDone, 20000);
     })();
   </script>
   <script src="flutter_bootstrap.js" async></script>

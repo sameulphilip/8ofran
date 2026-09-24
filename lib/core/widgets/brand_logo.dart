@@ -5,7 +5,7 @@ class BrandLogo extends StatelessWidget {
 
   final double height;
 
-  static const assetPath = 'assets/brand/ghofran_logo.png';
+  static const assetPath = 'assets/brand/ghofran_logo_clear.png';
 
   @override
   Widget build(BuildContext context) {

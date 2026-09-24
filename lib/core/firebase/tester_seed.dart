@@ -7,12 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'tester_catalog.dart';
 
 const testersAuthFlag = 'ghofran_testers_purged_v1';
-const accountsReadyFlag = 'ghofran_accounts_ready_v1';
+const accountsReadyFlag = 'ghofran_accounts_ready_v2';
 
 Future<void> seedDebugTesters() async {
   if (!kDebugMode || Firebase.apps.isEmpty) return;
   try {
-    await _seedAccounts().timeout(const Duration(seconds: 8));
+    await _seedAccounts().timeout(const Duration(seconds: 12));
   } catch (error) {
     debugPrint('Debug seed skipped: $error');
   } finally {
@@ -26,6 +26,7 @@ Future<void> _seedAccounts() async {
   await _purgeDisposableTesters();
   await _ensureAccount(TesterCatalog.admin);
   await _ensureAccount(TesterCatalog.member);
+  await _ensureAccount(TesterCatalog.priest);
   await prefs.setBool(accountsReadyFlag, true);
 }
 

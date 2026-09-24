@@ -1,3 +1,5 @@
+import '../../../core/constants/app_constants.dart';
+
 enum UserRole { member, priest, admin }
 
 class AppUser {
@@ -10,6 +12,8 @@ class AppUser {
     this.role = UserRole.member,
     this.priestId,
     this.fatherId,
+    this.churchId,
+    this.isSuspended = false,
   });
 
   final String id;
@@ -20,23 +24,50 @@ class AppUser {
   final UserRole role;
   final String? priestId;
   final String? fatherId;
+  final String? churchId;
+  final bool isSuspended;
 
   bool get isPriest =>
       role == UserRole.priest && (priestId?.isNotEmpty ?? false);
   bool get isAdmin => role == UserRole.admin;
+  bool get hasManagedChurch => churchId != null && churchId!.isNotEmpty;
+  bool get isSuperAdmin =>
+      isAdmin &&
+      (email.trim().toLowerCase() == AppConstants.adminEmail ||
+          !hasManagedChurch);
+  bool get isSteward => isAdmin && hasManagedChurch && !isSuperAdmin;
+  bool get canAccessAdmin => isAdmin;
   bool get hasFather => fatherId != null && fatherId!.isNotEmpty;
-  bool get needsFather => role == UserRole.member && !hasFather;
+  bool get needsFather => role == UserRole.member && !hasFather && !isSuspended;
+  bool get canBook =>
+      role == UserRole.member && !isSuspended && hasFather && !isAdmin;
 
   String get firstName {
     final parts = fullName.trim().split(RegExp(r'\s+'));
     return parts.isEmpty ? fullName : parts.first;
   }
 
+  bool managesChurch(String? id) {
+    if (isSuperAdmin) return true;
+    if (!isSteward || id == null || id.isEmpty) return false;
+    return churchId == id;
+  }
+
+  bool managesPriest(String? priestChurchId) {
+    if (isSuperAdmin) return true;
+    if (!isSteward) return false;
+    return priestChurchId != null && priestChurchId == churchId;
+  }
+
   AppUser copyWith({
     UserRole? role,
     String? priestId,
     String? fatherId,
+    String? churchId,
     String? password,
+    bool? isSuspended,
+    bool clearFather = false,
+    bool clearChurch = false,
   }) {
     return AppUser(
       id: id,
@@ -46,7 +77,9 @@ class AppUser {
       password: password ?? this.password,
       role: role ?? this.role,
       priestId: priestId ?? this.priestId,
-      fatherId: fatherId ?? this.fatherId,
+      fatherId: clearFather ? null : (fatherId ?? this.fatherId),
+      churchId: clearChurch ? null : (churchId ?? this.churchId),
+      isSuspended: isSuspended ?? this.isSuspended,
     );
   }
 
@@ -57,7 +90,9 @@ class AppUser {
     'email': email,
     'role': role.name,
     if (priestId != null) 'priestId': priestId,
-    if (fatherId != null) 'fatherId': fatherId,
+    if (fatherId != null && fatherId!.isNotEmpty) 'fatherId': fatherId,
+    if (churchId != null && churchId!.isNotEmpty) 'churchId': churchId,
+    if (isSuspended) 'isSuspended': true,
   };
 
   Map<String, dynamic> toLocalJson() => {...toJson(), 'password': password};
@@ -72,6 +107,8 @@ class AppUser {
       role: UserRole.values.byName(json['role'] as String? ?? 'member'),
       priestId: json['priestId'] as String?,
       fatherId: json['fatherId'] as String?,
+      churchId: json['churchId'] as String?,
+      isSuspended: json['isSuspended'] as bool? ?? false,
     );
   }
 }

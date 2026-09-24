@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/data/local_database.dart';
 import '../../../core/firebase/firebase_providers.dart';
 import '../../../core/firebase/firebase_seed.dart';
+import '../../../core/firebase/tester_catalog.dart';
 import '../../priests/domain/priest.dart';
 import '../domain/app_user.dart';
 
@@ -54,19 +58,34 @@ class AuthRepository {
     required bool remember,
   }) async {
     if (_cloud) {
-      await _setPersistence(remember);
-      final email = await _resolveEmail(identifier);
       try {
-        final credential = await _auth!.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        return _ensureProfile(credential.user!);
+        await _setPersistence(remember).timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Safari/iOS can hang on persistence changes — continue with default.
+      }
+      try {
+        final email = await _resolveEmail(identifier)
+            .timeout(const Duration(seconds: 8));
+        final credential = await _auth!
+            .signInWithEmailAndPassword(
+              email: email,
+              password: password,
+            )
+            .timeout(const Duration(seconds: 15));
+        final profile = await _ensureProfile(credential.user!)
+            .timeout(const Duration(seconds: 15));
+        return _guardActive(profile);
+      } on TimeoutException {
+        throw const AuthException(AppStrings.loginTimeout);
       } on FirebaseAuthException catch (error) {
         throw AuthException(_mapAuthError(error));
+      } on AuthException {
+        rethrow;
+      } catch (_) {
+        throw const AuthException(AppStrings.loginTimeout);
       }
     }
-    return _localLogin(identifier, password, remember);
+    return _guardActive(await _localLogin(identifier, password, remember));
   }
 
   Future<AppUser> signup({
@@ -115,6 +134,57 @@ class AuthRepository {
     return _localSignup(fullName, username, email, password, fatherId);
   }
 
+  Future<AppUser?> reload() async {
+    if (_cloud) return _profileFor(_auth!.currentUser);
+    return currentUser();
+  }
+
+  Future<void> writeFatherId(String userId, String fatherId) async {
+    final id = fatherId.trim();
+    if (id.isEmpty) {
+      throw const AuthException(AppStrings.chooseFatherError);
+    }
+    if (_cloud) {
+      await _store!.collection('users').doc(userId).set({
+        'fatherId': id,
+      }, SetOptions(merge: true));
+      return;
+    }
+    await _db.saveUsers([
+      for (final user in _db.users())
+        if (user.id == userId) user.copyWith(fatherId: id) else user,
+    ]);
+  }
+
+  Future<void> clearFatherId(String userId) async {
+    if (_cloud) {
+      await _store!.collection('users').doc(userId).set({
+        'fatherId': FieldValue.delete(),
+      }, SetOptions(merge: true));
+      return;
+    }
+    await _db.saveUsers([
+      for (final user in _db.users())
+        if (user.id == userId) user.copyWith(clearFather: true) else user,
+    ]);
+  }
+
+  Future<void> setSuspended(String userId, bool suspended) async {
+    if (_cloud) {
+      await _store!.collection('users').doc(userId).set({
+        if (suspended) 'isSuspended': true else 'isSuspended': FieldValue.delete(),
+      }, SetOptions(merge: true));
+      return;
+    }
+    await _db.saveUsers([
+      for (final user in _db.users())
+        if (user.id == userId)
+          user.copyWith(isSuspended: suspended)
+        else
+          user,
+    ]);
+  }
+
   Future<AppUser> setFather(String fatherId) async {
     final id = fatherId.trim();
     if (id.isEmpty) {
@@ -157,7 +227,7 @@ class AuthRepository {
       if (user == null) {
         throw const AuthException(AppStrings.googleMockNotice);
       }
-      return _ensureProfile(user);
+      return _guardActive(await _ensureProfile(user));
     } on FirebaseAuthException catch (error) {
       throw AuthException(_mapAuthError(error));
     }
@@ -187,6 +257,7 @@ class AuthRepository {
     required String password,
     required UserRole role,
     String? priestId,
+    String? churchId,
   }) async {
     final mail = email.trim().toLowerCase();
     if (!_cloud) {
@@ -206,6 +277,7 @@ class AuthRepository {
         password: password,
         role: role,
         priestId: priestId,
+        churchId: churchId,
       );
       await _db.saveUsers([...users, user]);
       return user.id;
@@ -236,6 +308,7 @@ class AuthRepository {
           email: mail,
           role: role,
           priestId: priestId,
+          churchId: churchId,
         );
         await _store.collection('users').doc(uid).set(user.toJson());
         await _store.collection('usernames').doc(username.toLowerCase()).set({
@@ -265,18 +338,30 @@ class AuthRepository {
 
   Future<void> _setPersistence(bool remember) async {
     if (!kIsWeb || _auth == null) return;
-    await _auth.setPersistence(
-      remember ? Persistence.LOCAL : Persistence.SESSION,
-    );
+    // SESSION hangs on many iOS Safari builds — always use LOCAL on web.
+    await _auth.setPersistence(Persistence.LOCAL);
   }
 
   Future<String> _resolveEmail(String identifier) async {
     final query = identifier.trim();
-    if (query.contains('@')) return query;
+    if (query.contains('@')) return query.toLowerCase();
+    final key = query.toLowerCase();
+    const aliases = {
+      'user': 'user@ghofran.app',
+      'admin': AppConstants.adminEmail,
+      'youhanna': 'youhanna@ghofran.app',
+    };
+    final aliased = aliases[key];
+    if (aliased != null) return aliased;
+    if (key == TesterCatalog.member.username) return TesterCatalog.member.email;
+    if (key == TesterCatalog.priest.username) return TesterCatalog.priest.email;
+    if (key == TesterCatalog.admin.username) return TesterCatalog.admin.email;
+
     final doc = await _store!
         .collection('usernames')
-        .doc(query.toLowerCase())
-        .get();
+        .doc(key)
+        .get()
+        .timeout(const Duration(seconds: 6));
     final email = doc.data()?['email'] as String?;
     if (!doc.exists || email == null) {
       throw const AuthException(AppStrings.loginFailed);
@@ -286,7 +371,12 @@ class AuthRepository {
 
   Future<AppUser?> _profileFor(User? firebaseUser) async {
     if (firebaseUser == null) return null;
-    return _ensureProfile(firebaseUser);
+    final user = await _ensureProfile(firebaseUser);
+    if (user.isSuspended) {
+      await logout();
+      return null;
+    }
+    return user;
   }
 
   Future<AppUser> _ensureProfile(User firebaseUser) async {
@@ -296,7 +386,8 @@ class AuthRepository {
     }
     final doc = await store.collection('users').doc(firebaseUser.uid).get();
     if (doc.exists) {
-      await seedFirestoreIfNeeded();
+      // Don't block login on catalog seed (can stall on slow mobile networks).
+      unawaited(seedFirestoreIfNeeded());
       final user = AppUser.fromJson({
         ...doc.data()!,
         'id': firebaseUser.uid,
@@ -342,29 +433,34 @@ class AuthRepository {
       email: user.email,
       role: UserRole.admin,
     );
-    await store
-        .collection('users')
-        .doc(user.id)
-        .set(linked.toJson(), SetOptions(merge: true));
+    await store.collection('users').doc(user.id).set({
+      ...linked.toJson(),
+      'churchId': FieldValue.delete(),
+    }, SetOptions(merge: true));
     return linked;
   }
 
   Future<AppUser> _linkPriest(AppUser user) async {
     final store = _store;
     if (store == null || user.isAdmin) return user;
-    await seedFirestoreIfNeeded();
+    unawaited(seedFirestoreIfNeeded());
     var match = priestByEmail(user.email);
     if (match == null) {
-      final snap = await store
-          .collection('priests')
-          .where('email', isEqualTo: user.email.trim().toLowerCase())
-          .limit(1)
-          .get();
-      if (snap.docs.isNotEmpty) {
-        match = Priest.fromJson({
-          'id': snap.docs.first.id,
-          ...snap.docs.first.data(),
-        });
+      try {
+        final snap = await store
+            .collection('priests')
+            .where('email', isEqualTo: user.email.trim().toLowerCase())
+            .limit(1)
+            .get()
+            .timeout(const Duration(seconds: 6));
+        if (snap.docs.isNotEmpty) {
+          match = Priest.fromJson({
+            'id': snap.docs.first.id,
+            ...snap.docs.first.data(),
+          });
+        }
+      } catch (_) {
+        return user;
       }
     }
     if (match == null) return user;
@@ -429,7 +525,13 @@ class AuthRepository {
       throw const AuthException(AppStrings.loginFailed);
     }
     await _db.setSession(user.id, remember: remember);
-    return user;
+    return _guardActive(user);
+  }
+
+  Future<AppUser> _guardActive(AppUser user) async {
+    if (!user.isSuspended) return user;
+    await logout();
+    throw const AuthException(AppStrings.suspendedBody);
   }
 
   Future<AppUser> _localSignup(

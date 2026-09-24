@@ -14,6 +14,9 @@ import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/booking_stepper.dart';
 import '../../../core/widgets/priest_avatar.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/data/local_database.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/domain/church.dart';
 import '../../appointments/domain/appointment.dart';
 import 'booking_controller.dart';
 
@@ -28,6 +31,13 @@ class ConfirmBookingScreen extends ConsumerStatefulWidget {
 class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
   final _notes = TextEditingController();
   bool _busy = false;
+  late bool _remind;
+
+  @override
+  void initState() {
+    super.initState();
+    _remind = ref.read(localDatabaseProvider).remindersEnabled();
+  }
 
   @override
   void dispose() {
@@ -40,7 +50,7 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
     try {
       await ref
           .read(bookingControllerProvider.notifier)
-          .confirm(notes: _notes.text.trim());
+          .confirm(notes: _notes.text.trim(), remind: _remind);
       if (mounted) context.go('/booking/success');
     } on SlotTakenException {
       if (mounted) {
@@ -62,6 +72,8 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
     if (priest == null || startsAt == null) {
       return const Scaffold(body: SizedBox.shrink());
     }
+    final church = findChurch(ref.watch(churchesProvider), priest.churchId);
+    final place = church?.placeLabel ?? priest.churchName;
 
     return Scaffold(
       appBar: AppBar(
@@ -144,10 +156,14 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
                           DateFormatters.time(startsAt),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        _row(Icons.location_on_outlined, priest.churchName),
+                        _row(Icons.location_on_outlined, place),
+                        if (church != null && church.name != place) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          _row(Icons.church_outlined, church.name),
+                        ],
                         const SizedBox(height: AppSpacing.sm),
                         TextButton.icon(
-                          onPressed: UrlActions.openMap,
+                          onPressed: () => UrlActions.openMap(church?.mapQuery),
                           icon: const Icon(Icons.map_outlined, size: 18),
                           label: const Text(AppStrings.openMaps),
                         ),
@@ -163,6 +179,14 @@ class _ConfirmBookingScreenState extends ConsumerState<ConfirmBookingScreen> {
                     maxLines: 2,
                     keyboardType: TextInputType.multiline,
                   ).enter(context, index: 3),
+                  const SizedBox(height: AppSpacing.sm),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(AppStrings.remindMe),
+                    subtitle: const Text(AppStrings.remindMeHint),
+                    value: _remind,
+                    onChanged: (value) => setState(() => _remind = value),
+                  ).enter(context, index: 4),
                   const SizedBox(height: AppSpacing.md),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

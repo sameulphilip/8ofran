@@ -7,7 +7,7 @@ You are building a Flutter app: Ghofran (غفران) — an Arabic RTL platform 
 - Language: Arabic only for now (RTL). All strings go in a central strings file, no hardcoded text in widgets.
 - Architecture: feature-first (lib/features/<feature>/{data,domain,presentation}).
 - State: Riverpod. Navigation: go_router. Backend: Firebase project `ofran-7a7c5`.
-- Visual identity: navy/snow (`#050D1C` splash, `#F6F8FB` screens, `#0F3D63` buttons), gold `#C9A24B`, Cairo. Logo: `assets/brand/ghofran_logo.png`. First launch plays `assets/brand/ghofran_splash.gif`, then login.
+- Visual identity: navy/snow (`#050D1C` splash, `#F6F8FB` screens, `#0F3D63` buttons), gold `#C9A24B`, Cairo. Logo: `assets/brand/ghofran_logo_clear.png` (transparent). First launch plays `assets/brand/ghofran_splash.mp4`, then login.
 - Drawer navigation from the start (RTL right). Clean cards, 2×2 home tiles, no bottom tab bar.
 - Never store confession content. Only booking metadata. Conscience exam answers stay on-device only.
 - After each task: run `flutter analyze` and fix all warnings. Keep widgets small and reusable.

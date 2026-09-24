@@ -126,6 +126,7 @@ class AppointmentRepository {
     String notes = '',
     String? rescheduleId,
     String? priestUid,
+    bool remind = true,
   }) async {
     final id = SlotId.build(
       priestId: priestId,
@@ -139,6 +140,7 @@ class AppointmentRepository {
       startsAt: startsAt,
       status: AppointmentStatus.pending,
       notes: notes,
+      remind: remind,
     );
 
     if (_cloud) {
@@ -199,6 +201,7 @@ class AppointmentRepository {
   Future<void> respond({
     required String appointmentId,
     required bool approve,
+    String rejectReason = '',
   }) async {
     Appointment? appointment;
     if (_cloud) {
@@ -216,14 +219,19 @@ class AppointmentRepository {
     final status = approve
         ? AppointmentStatus.confirmed
         : AppointmentStatus.cancelled;
+    final reason = approve ? '' : rejectReason.trim();
     if (_cloud) {
       await _store!.collection('appointments').doc(appointmentId).update({
         'status': status.name,
+        if (reason.isNotEmpty) 'rejectReason': reason,
       });
     } else {
       await _db.saveAppointments([
         for (final item in all())
-          if (item.id == appointmentId) item.copyWith(status: status) else item,
+          if (item.id == appointmentId)
+            item.copyWith(status: status, rejectReason: reason)
+          else
+            item,
       ]);
     }
 
@@ -234,8 +242,41 @@ class AppointmentRepository {
           : AppStrings.bookingRejectedTitle,
       body: approve
           ? AppStrings.bookingConfirmedBody
-          : AppStrings.bookingRejectedBody,
+          : AppStrings.bookingRejectedWithReason(reason),
     );
+  }
+
+  Future<void> cancelPendingFor({
+    required String userId,
+    required String priestId,
+  }) async {
+    if (_cloud) {
+      final snap = await _store!
+          .collection('appointments')
+          .where('userId', isEqualTo: userId)
+          .where('priestId', isEqualTo: priestId)
+          .where('status', isEqualTo: AppointmentStatus.pending.name)
+          .get();
+      for (final doc in snap.docs) {
+        try {
+          await doc.reference.update({
+            'status': AppointmentStatus.cancelled.name,
+          });
+        } catch (error) {
+          continue;
+        }
+      }
+      return;
+    }
+    await _db.saveAppointments([
+      for (final item in all())
+        if (item.userId == userId &&
+            item.priestId == priestId &&
+            item.isPending)
+          item.copyWith(status: AppointmentStatus.cancelled)
+        else
+          item,
+    ]);
   }
 
   Future<void> cancel(String appointmentId) async {
@@ -273,6 +314,45 @@ class AppointmentRepository {
       userId: appointment.userId,
       title: AppStrings.bookingCancelledTitle,
       body: AppStrings.bookingCancelledBody,
+    );
+  }
+
+  Future<void> complete(String appointmentId) async {
+    Appointment? appointment;
+    if (_cloud) {
+      final snap = await _store!
+          .collection('appointments')
+          .doc(appointmentId)
+          .get();
+      if (!snap.exists) return;
+      appointment = _fromDoc(snap);
+    } else {
+      appointment = byId(appointmentId);
+    }
+    if (appointment == null) return;
+    if (appointment.status != AppointmentStatus.confirmed) return;
+    if (!appointment.canComplete) {
+      throw const CompleteWindowException();
+    }
+
+    if (_cloud) {
+      await _store!.collection('appointments').doc(appointmentId).update({
+        'status': AppointmentStatus.completed.name,
+      });
+    } else {
+      await _db.saveAppointments([
+        for (final item in all())
+          if (item.id == appointmentId)
+            item.copyWith(status: AppointmentStatus.completed)
+          else
+            item,
+      ]);
+    }
+
+    await _notifications.add(
+      userId: appointment.userId,
+      title: AppStrings.appointmentCompletedTitle,
+      body: AppStrings.appointmentCompletedBody,
     );
   }
 

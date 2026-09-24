@@ -6,10 +6,12 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_nav.dart';
+import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../../core/widgets/form_error_banner.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../../priests/data/priest_repository.dart';
 import '../../priests/domain/priest.dart';
 import '../data/admin_repository.dart';
@@ -81,7 +83,7 @@ class _PriestFormScreenState extends ConsumerState<PriestFormScreen> {
   }
 
   Priest _draft() {
-    final churches = ref.read(churchesProvider);
+    final churches = ref.read(scopedChurchesProvider);
     final match = churches.where((item) => item.id == _churchId);
     final churchName = match.isEmpty ? '' : match.first.name;
     return Priest(
@@ -143,6 +145,23 @@ class _PriestFormScreenState extends ConsumerState<PriestFormScreen> {
     }
   }
 
+  Future<void> _unlinkAccount() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(adminRepositoryProvider).unlinkPriestAccount(_draft());
+      _uid = '';
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.priestAccountUnlinked)),
+      );
+      setState(() {});
+    } catch (error) {
+      if (mounted) setState(() => _errors.add(error.toString()));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _sendReset() async {
     setState(() => _busy = true);
     try {
@@ -161,8 +180,14 @@ class _PriestFormScreenState extends ConsumerState<PriestFormScreen> {
   @override
   Widget build(BuildContext context) {
     final priests = ref.watch(priestsProvider);
-    final churches = ref.watch(churchesProvider);
+    final churches = ref.watch(scopedChurchesProvider);
+    final actor = ref.watch(authControllerProvider);
     _hydrate(priests);
+    if (_churchId.isEmpty &&
+        actor?.isSteward == true &&
+        churches.length == 1) {
+      _churchId = churches.first.id;
+    }
     final churchIds = {for (final church in churches) church.id};
     final churchValue = churchIds.contains(_churchId) ? _churchId : null;
 
@@ -287,6 +312,12 @@ class _PriestFormScreenState extends ConsumerState<PriestFormScreen> {
                 onPressed: _busy ? null : _sendReset,
               ),
               const SizedBox(height: 12),
+              TonalButton(
+                danger: true,
+                label: AppStrings.unlinkPriestAccount,
+                onPressed: _busy ? null : _unlinkAccount,
+              ),
+              const SizedBox(height: 12),
             ],
             PrimaryButton(
               label: AppStrings.savePriest,
@@ -295,9 +326,59 @@ class _PriestFormScreenState extends ConsumerState<PriestFormScreen> {
               foregroundColor: AppColors.splash,
               onPressed: _busy ? null : _save,
             ),
+            if (!_isNew &&
+                (ref.watch(authControllerProvider)?.isSuperAdmin ?? false)) ...[
+              const SizedBox(height: 12),
+              TonalButton(
+                danger: true,
+                label: AppStrings.deletePriest,
+                onPressed: _busy ? null : _deletePriest,
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _deletePriest() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(AppStrings.deletePriestConfirm),
+        content: const Text(AppStrings.deletePriestBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(AppStrings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text(AppStrings.deletePriest),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(adminRepositoryProvider).deletePriest(_recordId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(AppStrings.priestDeleted)));
+      goBack(context);
+    } on AuthException catch (error) {
+      if (mounted) {
+        setState(() {
+          _errors
+            ..clear()
+            ..add(error.message);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }

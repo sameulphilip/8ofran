@@ -9,6 +9,7 @@ import '../../features/auth/domain/app_user.dart';
 import '../../features/care/domain/pastoral_care.dart';
 import '../../features/care/domain/spiritual_canon.dart';
 import '../../features/notifications/domain/app_notification.dart';
+import '../../features/priests/domain/father_transfer.dart';
 import '../../features/priests/domain/priest.dart';
 import '../firebase/seed_catalog.dart';
 import '../firebase/tester_catalog.dart';
@@ -28,8 +29,17 @@ class LocalDatabase {
   static const _churchesKey = 'churches';
   static const _careKey = 'pastoral_care';
   static const _canonsKey = 'spiritual_canons';
+  static const _transfersKey = 'father_transfers';
   static const _testersKey = 'seeded_testers_v3';
+  static const _churchDetailsKey = 'seeded_church_details_v1';
   static const _remindersKey = 'reminders_enabled';
+  static const _oldChurchNames = {
+    'القاهرة',
+    'الإسكندرية',
+    'المنيا',
+    'أسيوط',
+    'طنطا',
+  };
 
   Future<void> seedIfNeeded() async {
     if (!(_prefs.getBool(_seededKey) ?? false)) {
@@ -42,10 +52,12 @@ class LocalDatabase {
       await saveAppointments(const []);
       await saveCares(const []);
       await saveCanons(const []);
+      await saveTransfers(const []);
       await _prefs.setBool(_seededKey, true);
       await _prefs.setBool(_testersKey, true);
     }
     await _purgeLocalTesters();
+    await _refreshChurchDetails();
   }
 
   List<AppUser> users() => _readList(_usersKey, AppUser.fromJson);
@@ -118,6 +130,15 @@ class LocalDatabase {
     });
   }
 
+  List<FatherTransfer> transfers() =>
+      _readList(_transfersKey, FatherTransfer.fromJson);
+
+  Future<void> saveTransfers(List<FatherTransfer> value) {
+    return _writeJson(_transfersKey, [
+      for (final item in value) item.toJson(),
+    ]);
+  }
+
   Future<void> saveCanons(List<SpiritualCanon> value) {
     return _writeJson(_canonsKey, [
       for (final item in value) {'id': item.id, ...item.toJson()},
@@ -146,6 +167,52 @@ class LocalDatabase {
       await setSession(null, remember: false);
     }
     await _prefs.setBool(_testersKey, true);
+  }
+
+  Future<void> _refreshChurchDetails() async {
+    if (_prefs.getBool(_churchDetailsKey) ?? false) return;
+    if (churches().isEmpty) {
+      await saveChurches(seedChurches);
+    } else {
+      await saveChurches([
+        for (final church in churches()) _mergeChurchDetails(church),
+      ]);
+    }
+    await savePriests([
+      for (final priest in priests()) _withSeedChurchName(priest),
+    ]);
+    await _prefs.setBool(_churchDetailsKey, true);
+  }
+
+  Church _mergeChurchDetails(Church church) {
+    Church? seed;
+    for (final item in seedChurches) {
+      if (item.id == church.id) seed = item;
+    }
+    if (seed == null) return church;
+    if (church.address.isNotEmpty && !_oldChurchNames.contains(church.name)) {
+      return church;
+    }
+    return church.copyWith(
+      name: seed.name,
+      city: seed.city,
+      address: seed.address,
+      mapsQuery: seed.mapsQuery,
+      phone: seed.phone,
+    );
+  }
+
+  Priest _withSeedChurchName(Priest priest) {
+    if (!_oldChurchNames.contains(priest.churchName)) return priest;
+    for (final seed in seedPriests) {
+      if (seed.id == priest.id) {
+        return priest.copyWith(
+          churchName: seed.churchName,
+          churchId: seed.churchId,
+        );
+      }
+    }
+    return priest;
   }
 
   List<T> _readList<T>(String key, T Function(Map<String, dynamic>) fromJson) {

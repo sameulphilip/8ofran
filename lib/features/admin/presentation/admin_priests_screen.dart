@@ -11,6 +11,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/priest_avatar.dart';
 import '../../priests/data/priest_repository.dart';
+import '../data/admin_repository.dart';
 
 class AdminPriestsScreen extends ConsumerWidget {
   const AdminPriestsScreen({super.key});
@@ -18,7 +19,7 @@ class AdminPriestsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final priestsAsync = ref.watch(priestsStreamProvider);
-    final priests = priestsAsync.value ?? const [];
+    final priests = ref.watch(scopedPriestsProvider);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(

@@ -6,15 +6,24 @@ import '../constants/app_strings.dart';
 class UrlActions {
   UrlActions._();
 
-  static Future<void> openMap() {
+  static Future<void> openMap([String? query]) {
+    final search = (query != null && query.trim().isNotEmpty)
+        ? query.trim()
+        : AppConstants.mapsQuery;
     final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(AppConstants.mapsQuery)}',
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(search)}',
     );
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   static Future<void> callSupport() {
-    return launchUrl(Uri.parse('tel:${AppConstants.supportPhoneE164}'));
+    return callPhone(AppConstants.supportPhoneE164);
+  }
+
+  static Future<void> callPhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    if (digits.isEmpty) return Future.value();
+    return launchUrl(Uri.parse('tel:$digits'));
   }
 
   static Future<void> emailSupport() {
@@ -38,14 +47,19 @@ class UrlActions {
   static Future<void> addToCalendar({
     required DateTime startsAt,
     required String priestName,
+    String? location,
+    int slotMinutes = AppConstants.slotMinutes,
   }) {
-    final end = startsAt.add(const Duration(minutes: AppConstants.slotMinutes));
+    final end = startsAt.add(Duration(minutes: slotMinutes));
+    final place = (location != null && location.trim().isNotEmpty)
+        ? location.trim()
+        : AppStrings.supportAddress;
     final uri = Uri.parse(
       'https://calendar.google.com/calendar/render?action=TEMPLATE'
       '&text=${Uri.encodeComponent('موعد مع $priestName')}'
       '&dates=${_googleStamp(startsAt)}/${_googleStamp(end)}'
       '&details=${Uri.encodeComponent(AppStrings.appName)}'
-      '&location=${Uri.encodeComponent(AppStrings.supportAddress)}',
+      '&location=${Uri.encodeComponent(place)}',
     );
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }

@@ -16,9 +16,11 @@ import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../priests/data/father_transfer_repository.dart';
 import '../data/care_repository.dart';
 import '../domain/pastoral_care.dart';
 import '../../home/presentation/app_drawer.dart';
+import 'reject_reason_sheet.dart';
 
 class PriestHomeScreen extends ConsumerWidget {
   const PriestHomeScreen({super.key});
@@ -40,6 +42,7 @@ class PriestHomeScreen extends ConsumerWidget {
       for (final item in appointments)
         if (item.isUpcoming && item.isPending) item,
     ];
+    final inbox = ref.watch(inboxTransfersProvider);
     final flock = ref.watch(flockProvider).value ?? const [];
     final overdue = [
       for (final care in flock)
@@ -161,6 +164,26 @@ class PriestHomeScreen extends ConsumerWidget {
             ),
           ).enter(context, index: 2),
           const SizedBox(height: 12),
+          AppCard(
+            onTap: () => context.push('/priest/transfers'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.fatherTransfers,
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  inbox.isEmpty
+                      ? AppStrings.emptyTransfers
+                      : '${inbox.length}',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ).enter(context, index: 3),
+          const SizedBox(height: 12),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -175,14 +198,14 @@ class PriestHomeScreen extends ConsumerWidget {
                 background: AppColors.tileBook,
                 foreground: AppColors.primary700,
                 onTap: () => context.push('/priest/schedule'),
-              ).enter(context, index: 3),
+              ).enter(context, index: 4),
               HomeTile(
                 title: AppStrings.flock,
                 icon: Icons.groups_outlined,
                 background: AppColors.tilePriests,
                 foreground: AppColors.primary700,
                 onTap: () => context.push('/priest/flock'),
-              ).enter(context, index: 4),
+              ).enter(context, index: 5),
             ],
           ),
         ],
@@ -264,6 +287,10 @@ class PriestScheduleScreen extends ConsumerWidget {
                         const SizedBox(height: 12),
                         _RequestActions(appointment: item),
                       ],
+                      if (item.canComplete) ...[
+                        const SizedBox(height: 12),
+                        _CompleteVisitButton(appointment: item),
+                      ],
                     ],
                   ),
                 ).enter(context, index: index);
@@ -278,7 +305,10 @@ class PriestOverdueScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _FlockList(title: AppStrings.overdueList, overdueOnly: true);
+    return const _FlockList(
+      title: AppStrings.overdueList,
+      initialFilter: FlockFilter.overdue,
+    );
   }
 }
 
@@ -287,35 +317,47 @@ class PriestFlockScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const _FlockList(title: AppStrings.flock, overdueOnly: false);
+    return const _FlockList(title: AppStrings.flock);
   }
 }
 
-class _FlockList extends ConsumerWidget {
-  const _FlockList({required this.title, required this.overdueOnly});
+class _FlockList extends ConsumerStatefulWidget {
+  const _FlockList({
+    required this.title,
+    this.initialFilter = FlockFilter.all,
+  });
 
   final String title;
-  final bool overdueOnly;
+  final FlockFilter initialFilter;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FlockList> createState() => _FlockListState();
+}
+
+class _FlockListState extends ConsumerState<_FlockList> {
+  late FlockFilter _filter = widget.initialFilter;
+
+  @override
+  Widget build(BuildContext context) {
     final appointments = ref.watch(allAppointmentsProvider);
     final people = ref.watch(directoryProvider).value ?? const {};
-    var flock = ref.watch(flockProvider).value ?? const [];
-    if (overdueOnly) {
-      flock = [
-        for (final care in flock)
-          if (care.isOverdue(
-            DateTime.now(),
-            lastVisitFor(
-              userId: care.userId,
-              priestId: care.priestId,
-              appointments: appointments,
-            ),
-          ))
-            care,
-      ];
-    }
+    final canons = ref.watch(flockCanonsProvider).value ?? const {};
+    final transfers = ref.watch(inboxTransfersProvider);
+    final now = DateTime.now();
+    final flock = [
+      for (final care in ref.watch(flockProvider).value ?? const [])
+        if (matchesFlockFilter(
+          filter: _filter,
+          care: care,
+          now: now,
+          last: lastVisitFor(
+            userId: care.userId,
+            priestId: care.priestId,
+            appointments: appointments,
+          ),
+        ))
+          care,
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -323,52 +365,124 @@ class _FlockList extends ConsumerWidget {
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
         ),
-        title: Text(title),
+        title: Text(widget.title),
       ),
-      body: flock.isEmpty
-          ? Center(
-              child: EmptyState(
-                title: overdueOnly ? AppStrings.emptyOverdue : AppStrings.flock,
-                body: AppStrings.choosePerson,
-                icon: Icons.groups_outlined,
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-              itemCount: flock.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final care = flock[index];
-                final last = lastVisitFor(
-                  userId: care.userId,
-                  priestId: care.priestId,
-                  appointments: appointments,
-                );
-                final person = people[care.userId];
-                return AppCard(
-                  onTap: () => context.push('/care/${care.userId}'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        person?.fullName ?? care.userId,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${AppStrings.lastVisitLabel}: ${AppStrings.daysSinceVisit(care.daysSince(DateTime.now(), last))}',
-                        style: const TextStyle(color: AppColors.textSecondary),
-                      ),
-                      Text(
-                        AppStrings.everyNDays(care.intervalDays),
-                        style: const TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
+      body: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            child: Row(
+              children: [
+                for (final filter in FlockFilter.values) ...[
+                  ChoiceChip(
+                    label: Text(_filterLabel(filter)),
+                    selected: _filter == filter,
+                    onSelected: (_) => setState(() => _filter = filter),
                   ),
-                ).enter(context, index: index);
-              },
+                  const SizedBox(width: 8),
+                ],
+              ],
             ),
+          ),
+          Expanded(
+            child: flock.isEmpty
+                ? Center(
+                    child: EmptyState(
+                      title: _filter == FlockFilter.overdue
+                          ? AppStrings.emptyOverdue
+                          : AppStrings.emptyFlockFilter,
+                      body: AppStrings.choosePerson,
+                      icon: Icons.groups_outlined,
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                    itemCount: flock.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final care = flock[index];
+                      final last = lastVisitFor(
+                        userId: care.userId,
+                        priestId: care.priestId,
+                        appointments: appointments,
+                      );
+                      final person = people[care.userId];
+                      final pendingCount = appointments
+                          .where(
+                            (item) =>
+                                item.userId == care.userId && item.isPending,
+                          )
+                          .length;
+                      final rule = canons[care.userId]?.rule ?? '';
+                      final moving = transfers.any(
+                        (item) => item.userId == care.userId,
+                      );
+                      return AppCard(
+                        onTap: () => context.push('/care/${care.userId}'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              person?.fullName ?? care.userId,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${AppStrings.lastVisitLabel}: ${AppStrings.daysSinceVisit(care.daysSince(now, last))}',
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              AppStrings.everyNDays(care.intervalDays),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            if (pendingCount > 0)
+                              Text(
+                                '${AppStrings.pendingBookingsLabel}: $pendingCount',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            if (rule.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '${AppStrings.currentRuleLabel}: ${rule.length > 48 ? '${rule.substring(0, 48)}…' : rule}',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                            if (moving) ...[
+                              const SizedBox(height: 6),
+                              const Text(
+                                AppStrings.changeFatherPending,
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ).enter(context, index: index);
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
+  }
+
+  String _filterLabel(FlockFilter filter) {
+    return switch (filter) {
+      FlockFilter.all => AppStrings.flockAll,
+      FlockFilter.fresh => AppStrings.flockFresh,
+      FlockFilter.regular => AppStrings.flockRegular,
+      FlockFilter.overdue => AppStrings.overdueList,
+    };
   }
 }
 
@@ -385,11 +499,21 @@ class _RequestActionsState extends ConsumerState<_RequestActions> {
   bool _busy = false;
 
   Future<void> _respond(bool approve) async {
+    var reason = '';
+    if (!approve) {
+      final picked = await pickRejectReason(context);
+      if (picked == null || picked.isEmpty) return;
+      reason = picked;
+    }
     setState(() => _busy = true);
     try {
       await ref
           .read(appointmentRepositoryProvider)
-          .respond(appointmentId: widget.appointment.id, approve: approve);
+          .respond(
+            appointmentId: widget.appointment.id,
+            approve: approve,
+            rejectReason: reason,
+          );
       ref.invalidate(appointmentsStreamProvider);
       ref.invalidate(userNotificationsProvider);
     } finally {
@@ -422,6 +546,53 @@ class _RequestActionsState extends ConsumerState<_RequestActions> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CompleteVisitButton extends ConsumerStatefulWidget {
+  const _CompleteVisitButton({required this.appointment});
+
+  final Appointment appointment;
+
+  @override
+  ConsumerState<_CompleteVisitButton> createState() =>
+      _CompleteVisitButtonState();
+}
+
+class _CompleteVisitButtonState extends ConsumerState<_CompleteVisitButton> {
+  bool _busy = false;
+
+  Future<void> _complete() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(appointmentRepositoryProvider)
+          .complete(widget.appointment.id);
+      ref.invalidate(appointmentsStreamProvider);
+      ref.invalidate(userNotificationsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.visitCompleted)),
+        );
+      }
+    } on CompleteWindowException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.completeTooEarly)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TonalButton(
+      label: AppStrings.markCompleted,
+      icon: Icons.check_circle_outline,
+      onPressed: _busy ? null : _complete,
     );
   }
 }

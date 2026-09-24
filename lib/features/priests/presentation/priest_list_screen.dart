@@ -11,6 +11,9 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/booking_stepper.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/priest_avatar.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/domain/admin_scope.dart';
+import '../../admin/domain/church.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
 import '../../booking/presentation/booking_nav.dart';
@@ -30,7 +33,10 @@ class PriestListScreen extends ConsumerWidget {
       if (priest == null && loading) {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
-      if (priest != null && priest.isAvailable) {
+      if (priest != null &&
+          priest.isBookable(
+            findChurch(ref.watch(churchesProvider), priest.churchId),
+          )) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
           openMemberBooking(
@@ -45,9 +51,11 @@ class PriestListScreen extends ConsumerWidget {
     }
 
     final priestsAsync = ref.watch(priestsStreamProvider);
-    final priests = (priestsAsync.value ?? const [])
-        .where((priest) => priest.isAvailable)
-        .toList();
+    final churches = ref.watch(churchesProvider);
+    final priests = bookablePriests(
+      priestsAsync.value ?? const [],
+      churches,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -111,7 +119,9 @@ class PriestListScreen extends ConsumerWidget {
                 final priest = priests[index - 1];
                 return AppCard(
                   key: ValueKey(priest.id),
-                  onTap: priest.isAvailable
+                  onTap: priest.isBookable(
+                    findChurch(churches, priest.churchId),
+                  )
                       ? () {
                           ref
                               .read(bookingControllerProvider.notifier)
@@ -123,7 +133,11 @@ class PriestListScreen extends ConsumerWidget {
                         }
                       : null,
                   child: Opacity(
-                    opacity: priest.isAvailable ? 1 : 0.55,
+                    opacity: priest.isBookable(
+                          findChurch(churches, priest.churchId),
+                        )
+                        ? 1
+                        : 0.55,
                     child: Row(
                       children: [
                         PriestAvatar(

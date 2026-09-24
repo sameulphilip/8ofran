@@ -80,6 +80,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
         HapticFeedback.lightImpact();
       }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errors.add(AppStrings.loginTimeout);
+          _shake++;
+        });
+        HapticFeedback.lightImpact();
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

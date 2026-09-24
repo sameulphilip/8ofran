@@ -45,6 +45,24 @@ class PastoralCare {
   }
 }
 
+enum FlockFilter { all, fresh, regular, overdue }
+
+bool matchesFlockFilter({
+  required FlockFilter filter,
+  required PastoralCare care,
+  required DateTime now,
+  DateTime? last,
+}) {
+  final overdue = care.isOverdue(now, last);
+  final fresh = last == null;
+  return switch (filter) {
+    FlockFilter.all => true,
+    FlockFilter.fresh => fresh,
+    FlockFilter.overdue => overdue,
+    FlockFilter.regular => !fresh && !overdue,
+  };
+}
+
 DateTime? lastVisitFor({
   required String userId,
   required String priestId,

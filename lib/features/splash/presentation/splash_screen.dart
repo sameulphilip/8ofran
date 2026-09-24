@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,8 +20,11 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   static const videoAsset = 'assets/brand/ghofran_splash.mp4';
+  /// Safety only — normal path waits for the video to finish.
+  static const maxSplash = Duration(seconds: 12);
 
   VideoPlayerController? _controller;
+  Timer? _maxTimer;
   bool _started = false;
   bool _leaving = false;
 
@@ -39,6 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _maxTimer = Timer(maxSplash, _goNext);
     if (context.reduceMotion) {
       removeHtmlSplash();
       Future<void>.delayed(const Duration(milliseconds: 400), _goNext);
@@ -58,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
       await controller.setLooping(false);
       await controller.setVolume(0);
       await controller.initialize();
-      if (!mounted) return;
+      if (!mounted || _leaving) return;
       controller.addListener(_onVideoTick);
       await controller.play();
       if (mounted) setState(() {});
@@ -81,6 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void _goNext() {
     if (_leaving || !mounted) return;
     _leaving = true;
+    _maxTimer?.cancel();
     removeHtmlSplash();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -90,6 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
+    _maxTimer?.cancel();
     _controller?.removeListener(_onVideoTick);
     _controller?.dispose();
     super.dispose();

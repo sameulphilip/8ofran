@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/presentation/admin_member_detail_screen.dart';
+import '../../features/admin/presentation/admin_members_screen.dart';
 import '../../features/admin/presentation/admin_priests_screen.dart';
 import '../../features/admin/presentation/church_form_screen.dart';
 import '../../features/admin/presentation/churches_screen.dart';
@@ -16,15 +19,20 @@ import '../../features/booking/presentation/confirm_booking_screen.dart';
 import '../../features/booking/presentation/select_slot_screen.dart';
 import '../../features/church/presentation/church_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/info/presentation/church_calendar_screen.dart';
 import '../../features/info/presentation/conscience_exam_screen.dart';
 import '../../features/info/presentation/guide_screens.dart';
 import '../../features/info/presentation/info_screen.dart';
+import '../../features/info/presentation/prepare_checklist_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/priests/presentation/change_father_screen.dart';
 import '../../features/priests/presentation/choose_father_screen.dart';
+import '../../features/priests/presentation/father_transfers_screen.dart';
 import '../../features/priests/presentation/priest_list_screen.dart';
 import '../../features/care/presentation/assign_care_screen.dart';
 import '../../features/care/presentation/priest_home_screen.dart';
 import '../../features/care/presentation/spiritual_rule_screen.dart';
+import '../../features/settings/presentation/legal_screens.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'transitions.dart';
@@ -40,7 +48,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    initialLocation: '/splash',
+    // On web the HTML video covers boot; skip a second Flutter splash wait.
+    initialLocation: kIsWeb ? '/login' : '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
       final loggedIn = ref.read(authControllerProvider) != null;
@@ -49,7 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final splash = location == '/splash';
       final authRoute = location == '/login' || location == '/signup';
       final chooseFather = location == '/choose-father';
-      if (splash) return null;
+      if (splash) {
+        if (kIsWeb) return loggedIn ? '/home' : '/login';
+        return null;
+      }
       if (!loggedIn) {
         if (authRoute) return null;
         return '/login';
@@ -58,8 +70,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/choose-father';
       }
       if (authRoute) return '/home';
-      if (location.startsWith('/admin') && user?.isAdmin != true) {
+      if (location.startsWith('/admin') && user?.canAccessAdmin != true) {
         return '/home';
+      }
+      if (location == '/priest/transfers' &&
+          user?.isPriest != true &&
+          user?.isAdmin != true) {
+        return '/home';
+      }
+      if (location == '/change-father' && user?.hasFather != true) {
+        return user?.needsFather == true ? '/choose-father' : '/home';
       }
       return null;
     },
@@ -83,6 +103,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/choose-father',
         pageBuilder: (context, state) =>
             sharedAxisPage(state: state, child: const ChooseFatherScreen()),
+      ),
+      GoRoute(
+        path: '/change-father',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const ChangeFatherScreen()),
+      ),
+      GoRoute(
+        path: '/priest/transfers',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const FatherTransfersScreen()),
       ),
       GoRoute(
         path: '/home',
@@ -143,6 +173,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             sharedAxisPage(state: state, child: const ConscienceExamScreen()),
       ),
       GoRoute(
+        path: '/info/prepare',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const PrepareChecklistScreen()),
+      ),
+      GoRoute(
+        path: '/info/calendar',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const ChurchCalendarScreen()),
+      ),
+      GoRoute(
         path: '/info/psalm',
         pageBuilder: (context, state) =>
             sharedAxisPage(state: state, child: const PsalmScreen()),
@@ -151,6 +191,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/info/fasts',
         pageBuilder: (context, state) =>
             sharedAxisPage(state: state, child: const FastsScreen()),
+      ),
+      GoRoute(
+        path: '/privacy',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const PrivacyPolicyScreen()),
+      ),
+      GoRoute(
+        path: '/terms',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const TermsScreen()),
       ),
       GoRoute(
         path: '/notifications',
@@ -221,6 +271,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => sharedAxisPage(
           state: state,
           child: PriestFormScreen(priestId: state.pathParameters['priestId']),
+        ),
+      ),
+      GoRoute(
+        path: '/admin/members',
+        pageBuilder: (context, state) =>
+            sharedAxisPage(state: state, child: const AdminMembersScreen()),
+      ),
+      GoRoute(
+        path: '/admin/members/:userId',
+        pageBuilder: (context, state) => sharedAxisPage(
+          state: state,
+          child: AdminMemberDetailScreen(
+            userId: state.pathParameters['userId']!,
+          ),
         ),
       ),
     ],

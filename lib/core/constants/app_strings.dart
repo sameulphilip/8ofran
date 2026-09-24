@@ -38,6 +38,8 @@ class AppStrings {
   static const passwordMismatch = 'كلمتا المرور غير متطابقتين';
   static const acceptTermsError = 'يجب الموافقة على الشروط أولاً';
   static const loginFailed = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+  static const loginTimeout =
+      'الاتصال أخذ وقتًا أطول من المتوقع. حاول مرة أخرى.';
   static const usernameTaken = 'اسم المستخدم مستخدم من قبل';
   static const emailTaken = 'هذا البريد مسجّل من قبل';
   static const googleMockNotice =
@@ -61,6 +63,41 @@ class AppStrings {
   static const bookingRejectedTitle = 'لم يُقبل طلب الحجز';
   static const bookingRejectedBody =
       'الأب لم يوافق على هذا الموعد. يمكنك طلب وقت آخر.';
+  static const rejectReasonTitle = 'سبب الرفض';
+  static const rejectReasonHint =
+      'سبب تنظيمي قصير. لا تكتب شيئًا عن محتوى الجلسة.';
+  static const rejectReasonSlotGone = 'الموعد لم يعد متاحًا';
+  static const rejectReasonPickAnother = 'اختَر وقتًا آخر من الجدول';
+  static const rejectReasonChurchClosed = 'الكنيسة مغلقة في هذا اليوم';
+  static const rejectReasonFull = 'العدد اكتمل في هذا الوقت';
+  static const rejectReasonOther = 'سبب آخر للتنظيم';
+  static const rejectReasonRequired = 'اختر سببًا للرفض';
+  static const changeFather = 'تغيير الأب الروحي';
+  static const changeFatherHint =
+      'الطلب يحتاج موافقة الأب الحالي والأب الجديد، أو موافقة الإدارة.';
+  static const changeFatherPending = 'طلب تغيير الأب قيد المراجعة';
+  static const changeFatherSent = 'تم إرسال طلب تغيير الأب.';
+  static const changeFatherDone = 'تم تغيير الأب الروحي.';
+  static const changeFatherRejected = 'لم يُقبل طلب تغيير الأب.';
+  static const changeFatherCancelled = 'تم إلغاء طلب تغيير الأب.';
+  static const fatherTransfers = 'طلبات تغيير الأب';
+  static const emptyTransfers = 'لا توجد طلبات تغيير الآن';
+  static const emptyTransfersHint = 'لما ابن يطلب انتقالًا، هيظهر هنا.';
+  static const transferLeave = 'يريد الانتقال من رعايتك';
+  static const transferJoin = 'يريد الانضمام إلى رعايتك';
+  static const transferApprove = 'موافقة على الانتقال';
+  static const transferReject = 'رفض الانتقال';
+  static const transferCancel = 'إلغاء الطلب';
+  static const transferWaitingOther = 'بانتظار موافقة الطرف الآخر';
+  static const currentFather = 'الأب الحالي';
+  static const sameFatherError = 'اختَر أبًا مختلفًا عن الأب الحالي';
+  static const transferPendingError = 'عندك طلب تغيير قيد المراجعة';
+  static const flockFresh = 'جدد';
+  static const flockRegular = 'منتظمون';
+  static const flockAll = 'الكل';
+  static const pendingBookingsLabel = 'طلبات معلّقة';
+  static const currentRuleLabel = 'القانون الحالي';
+  static const emptyFlockFilter = 'لا أحد في هذا التصنيف';
   static const sendBookingRequest = 'إرسال طلب الحجز';
   static const waitingPriestApproval = 'في انتظار موافقة الأب';
   static const approveRequest = 'موافقة';
@@ -132,6 +169,7 @@ class AppStrings {
       'تفاصيل الجلسة سرّ بينك وبين الأب، ولا تُخزَّن في التطبيق.';
   static const optionalNote = 'ملاحظة للتنظيم (اختياري)';
   static const remindMe = 'هل تحب أن نذكّرك قبل موعدك؟';
+  static const remindMeHint = 'تذكير على الجهاز قبل الموعد بيوم ويومين.';
 
   static const upcoming = 'القادمة';
   static const past = 'السابقة';
@@ -198,8 +236,48 @@ class AppStrings {
   static const settingsTitle = 'الإعدادات';
   static const notifyReminders = 'تذكير بالمواعيد';
   static const biometricSoon = 'قفل التطبيق بالبصمة أو الوجه';
-  static const biometricHint = 'قريباً. لن يُخزَّن أي محتوى خاص بالجلسة.';
+  static const biometricHint =
+      'رقم سرّ محلي، مع بصمة على الموبايل إن توفرت. لا يُرفع محتوى الجلسة.';
   static const privacyPolicy = 'سياسة الخصوصية';
+  static const termsTitle = 'الشروط والاستخدام';
+  static const termsBody =
+      'غفران أداة لحجز مواعيد هادئة مع أب روحي. '
+      'باستخدامك للتطبيق توافق على أن تفاصيل الجلسة سرّ بينك وبين الأب ولا تُرفع للتطبيق. '
+      'بيانات الحجز (من، مع من، ومتى) تُحفظ لتشغيل الخدمة فقط. '
+      'الفحص الذاتي وملاحظاتك المحلية تبقى على جهازك ويمكنك مسحها في أي وقت.';
+  static const churchCalendar = 'تقويم كنسي';
+  static const churchCalendarHint =
+      'مواعيد تقريبية للتذكير الروحي. راجع كنيستك للمواعيد الرسمية.';
+  static const seasonToday = 'الموسم الحالي';
+  static const prepareChecklist = 'قائمة الاستعداد';
+  static const prepareChecklistHint =
+      'خطوات قصيرة قبل الذهاب. الإجابات تبقى على الجهاز فقط.';
+  static const prepareSaved = 'تم حفظ قائمة الاستعداد على جهازك.';
+  static const conscienceNotes = 'ملاحظات على الجهاز (اختياري)';
+  static const conscienceNotesHint =
+      'اكتب لنفسك فقط. لن تُرفع للسيرفر ولن يراها أحد غيرك على هذا الجهاز.';
+  static const exportLocal = 'نسخ الملخص محليًا';
+  static const exportedLocal = 'تم نسخ الملخص. الصقه في دفترك إن احتجت.';
+  static const noConfessionStored =
+      'غفران لا يحفظ محتوى الاعتراف أو تفاصيل الجلسة.';
+  static const appLock = 'قفل التطبيق';
+  static const appLockHint =
+      'رقم سرّ على الجهاز، مع بصمة إن توفرت على الموبايل.';
+  static const appLockEnabled = 'القفل مفعّل';
+  static const appLockDisabled = 'القفل متوقف';
+  static const setAppPin = 'تعيين رقم السر';
+  static const confirmAppPin = 'تأكيد رقم السر';
+  static const enterAppPin = 'أدخل رقم السر';
+  static const unlockWithBiometric = 'فتح بالبصمة أو الوجه';
+  static const unlockApp = 'فتح غفران';
+  static const pinTooShort = 'رقم السر من 4 أرقام على الأقل';
+  static const pinMismatch = 'الرقمان غير متطابقين';
+  static const wrongPin = 'رقم السر غير صحيح';
+  static const changeAppPin = 'تغيير رقم السر';
+  static const turnOffAppLock = 'إيقاف قفل التطبيق';
+  static const biometricUnavailable = 'البصمة غير متاحة على هذا الجهاز';
+  static const seasonalQuestion = 'سؤال موسمي';
+  static const calendarNow = 'الآن';
   static const aboutApp = 'عن غفران';
   static const demoHint = 'أنشئ حساباً جديداً أو ادخل ببريدك.';
   static const testersTitle = 'حسابات التجربة';
@@ -224,6 +302,7 @@ class AppStrings {
   static const logoutConfirm = 'خروج من الحساب؟';
   static const logoutBody = 'تقدر ترجع في أي وقت.';
   static const cancel = 'إلغاء';
+  static const save = 'حفظ';
   static const ok = 'حسناً';
 
   static const aboutBody =
@@ -276,6 +355,16 @@ class AppStrings {
   static const editChurch = 'تعديل الكنيسة';
   static const churchName = 'اسم الكنيسة';
   static const cityLabel = 'المدينة';
+  static const churchAddress = 'العنوان';
+  static const churchMapsQuery = 'نص البحث في الخرائط';
+  static const churchMapsHint = 'مثال: كاتدرائية القديس مرقس العباسية القاهرة';
+  static const churchPhone = 'هاتف الكنيسة';
+  static const callChurch = 'اتصال بالكنيسة';
+  static const markCompleted = 'تم اللقاء';
+  static const visitCompleted = 'تم تسجيل أن اللقاء حصل.';
+  static const completeTooEarly = 'يمكن إنهاء الموعد عند حلول وقته.';
+  static const appointmentCompletedTitle = 'اكتمل الموعد';
+  static const appointmentCompletedBody = 'تم تسجيل زياراتك. سلام الرب معك.';
   static const emptyChurches = 'لا توجد كنائس بعد';
   static const emptyChurchesHint = 'أضف كنيسة أولاً، ثم اربط بها الآباء.';
   static const saveChurch = 'حفظ الكنيسة';
@@ -315,6 +404,66 @@ class AppStrings {
   static const weekdayFriday = 'الجمعة';
   static const adminEmailHint =
       'ادخل ببريد الإدارة admin@ghofran.app لإدارة الكنائس والآباء.';
+  static const adminMembers = 'الأعضاء';
+  static const adminAccounts = 'كل الحسابات';
+  static const memberDetails = 'بيانات العضو';
+  static const accountDetails = 'بيانات الحساب';
+  static const emptyMembers = 'لا يوجد أعضاء';
+  static const emptyMembersHint = 'الأعضاء يظهرون هنا بعد إنشاء الحساب.';
+  static const emptyAccounts = 'لا توجد حسابات';
+  static const emptyAccountsHint = 'أنشئ حسابًا جديدًا أو انتظر تسجيل المستخدمين.';
+  static const searchMembers = 'ابحث بالاسم أو البريد';
+  static const addMemberAccount = 'إضافة حساب';
+  static const createMemberAccount = 'إنشاء حساب عضو';
+  static const memberCreated = 'تم إنشاء الحساب.';
+  static const deleteAccount = 'حذف الحساب';
+  static const deleteAccountConfirm = 'حذف هذا الحساب من غفران؟';
+  static const deleteAccountBody =
+      'سيُحذف ملف الحساب من الخدمة. لا يمكن التراجع عن ذلك.';
+  static const accountDeleted = 'تم حذف الحساب.';
+  static const deleteChurch = 'حذف الكنيسة';
+  static const deleteChurchConfirm = 'حذف الكنيسة؟';
+  static const deleteChurchBody =
+      'ستُحذف الكنيسة من القائمة. راجع الآباء المرتبطين بها بعد الحذف.';
+  static const churchDeleted = 'تم حذف الكنيسة.';
+  static const deletePriest = 'حذف الأب';
+  static const deletePriestConfirm = 'حذف بيانات الأب؟';
+  static const deletePriestBody =
+      'ستُحذف بطاقة الأب من الكتالوج. الحسابات المرتبطة تحتاج مراجعة.';
+  static const priestDeleted = 'تم حذف الأب.';
+  static const roleMember = 'عضو';
+  static const rolePriest = 'كاهن';
+  static const roleAdmin = 'إدارة';
+  static const roleSteward = 'أمين كنيسة';
+  static const cannotDeleteSelf = 'لا يمكن حذف حسابك الحالي.';
+  static const cannotDeleteSeedAdmin = 'لا يمكن حذف حساب الإدارة العامة.';
+  static const suspendMember = 'إيقاف الحساب';
+  static const unsuspendMember = 'إعادة تفعيل الحساب';
+  static const memberSuspended = 'الحساب موقف مؤقتًا';
+  static const memberActive = 'الحساب نشط';
+  static const unlinkFather = 'فك ارتباط الأب الروحي';
+  static const fatherUnlinked = 'تم فك ارتباط الأب الروحي.';
+  static const fatherAssigned = 'تم ربط الأب الروحي.';
+  static const churchActive = 'الكنيسة ظاهرة للحجز';
+  static const churchPaused = 'الكنيسة متوقفة مؤقتًا';
+  static const unlinkPriestAccount = 'فك ربط حساب الدخول';
+  static const priestAccountUnlinked = 'تم فك ربط حساب الدخول.';
+  static const stewardTitle = 'أمين خدمة الكنيسة';
+  static const stewardHint =
+      'أمين الخدمة يدير كنيسته والآباء والأعضاء المرتبطين بها فقط.';
+  static const createSteward = 'إنشاء أمين خدمة';
+  static const stewardCreated = 'تم إنشاء حساب أمين الخدمة.';
+  static const stewardOnlySuper = 'إنشاء أمين الخدمة متاح للإدارة العامة فقط.';
+  static const suspendedTitle = 'الحساب موقف';
+  static const suspendedBody =
+      'هذا الحساب موقف مؤقتًا. تقدر تتواصل مع الخدمة لو حصل خطأ.';
+  static const statMembers = 'الأعضاء';
+  static const statPending = 'طلبات معلّقة';
+  static const statToday = 'مواعيد اليوم';
+  static const statPriests = 'آباء متاحون';
+  static const churchScope = 'نطاق الكنيسة';
+  static const noFatherAssigned = 'بدون أب روحي';
+  static const superAdminLabel = 'إدارة عامة — تحكم كامل';
 
   static String minutesLabel(int minutes) => '$minutes $minutesUnit';
 
@@ -329,6 +478,19 @@ class AppStrings {
       DateTime.friday => weekdayFriday,
       _ => '$weekday',
     };
+  }
+
+  static const rejectReasons = [
+    rejectReasonSlotGone,
+    rejectReasonPickAnother,
+    rejectReasonChurchClosed,
+    rejectReasonFull,
+  ];
+
+  static String bookingRejectedWithReason(String reason) {
+    final trimmed = reason.trim();
+    if (trimmed.isEmpty) return bookingRejectedBody;
+    return '$bookingRejectedBody $trimmed';
   }
 
   static String everyNDays(int days) {

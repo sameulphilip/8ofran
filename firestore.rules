@@ -25,6 +25,54 @@ service cloud.firestore {
       );
     }
 
+    function managedChurchId() {
+      return userData().get('churchId', '');
+    }
+
+    function isSuperAdmin() {
+      return isSeedAdmin() || (
+        isAdmin() && managedChurchId() == ''
+      );
+    }
+
+    function isChurchAdmin() {
+      return isAdmin() && managedChurchId() != '';
+    }
+
+    function managesChurch(churchId) {
+      return isSuperAdmin() || (isChurchAdmin() && managedChurchId() == churchId);
+    }
+
+    function priestChurchId(priestId) {
+      return exists(/databases/$(database)/documents/priests/$(priestId))
+        ? get(/databases/$(database)/documents/priests/$(priestId)).data.get('churchId', '')
+        : '';
+    }
+
+    function managesPriest(priestId) {
+      return isSuperAdmin() || (
+        isChurchAdmin() && priestChurchId(priestId) == managedChurchId()
+      );
+    }
+
+    function isMemberDoc(data) {
+      return data.get('role', 'member') == 'member';
+    }
+
+    function managesMember(uid) {
+      return isSuperAdmin() || (
+        isChurchAdmin()
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && isMemberDoc(get(/databases/$(database)/documents/users/$(uid)).data)
+        && (
+          get(/databases/$(database)/documents/users/$(uid)).data.get('fatherId', '') == ''
+          || priestChurchId(
+            get(/databases/$(database)/documents/users/$(uid)).data.fatherId
+          ) == managedChurchId()
+        )
+      );
+    }
+
     function priestEmailMatch() {
       return request.resource.data.priestId is string
         && exists(/databases/$(database)/documents/priests/$(request.resource.data.priestId))
@@ -48,14 +96,38 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if !hasForbiddenKeys() && (isOwner(uid) || isAdmin());
+      allow create: if !hasForbiddenKeys() && (
+        isOwner(uid)
+        || isSuperAdmin()
+        || (
+          isChurchAdmin()
+          && request.resource.data.role == 'member'
+        )
+        || (
+          isChurchAdmin()
+          && request.resource.data.role == 'priest'
+        )
+      );
       allow update: if !hasForbiddenKeys() && (
-        isAdmin()
+        isSuperAdmin()
+        || (
+          managesMember(uid)
+          && isMemberDoc(resource.data)
+          && isMemberDoc(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['fatherId', 'isSuspended'])
+        )
         || (
           isOwner(uid) && (
             (
               request.resource.data.role == resource.data.role
               && request.resource.data.get('priestId', '') == resource.data.get('priestId', '')
+              && (
+                request.resource.data.get('fatherId', '')
+                  == resource.data.get('fatherId', '')
+                || !resource.data.keys().hasAny(['fatherId'])
+                || resource.data.fatherId == ''
+              )
             )
             || priestEmailMatch()
             || (
@@ -64,8 +136,17 @@ service cloud.firestore {
             )
           )
         )
+        || (
+          isPriest()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['fatherId'])
+          && (
+            userData().priestId == resource.data.get('fatherId', '')
+            || userData().priestId == request.resource.data.fatherId
+          )
+        )
       );
-      allow delete: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /usernames/{name} {
@@ -84,18 +165,19 @@ service cloud.firestore {
 
     match /churches/{id} {
       allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isSuperAdmin();
+      allow update: if managesChurch(id);
     }
 
     match /priests/{id} {
       allow read: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (
+      allow create: if managesChurch(request.resource.data.get('churchId', ''));
+      allow update: if managesPriest(id) || (
         signedIn()
         && resource.data.email == request.auth.token.email
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid'])
       );
-      allow delete: if false;
+      allow delete: if isSuperAdmin();
     }
 
     match /appointments/{id} {
@@ -150,11 +232,63 @@ service cloud.firestore {
         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
           == resource.data.priestId
       );
-      allow create, update: if signedIn() && !hasForbiddenKeys() && (
+      allow create: if signedIn() && !hasForbiddenKeys() && (
         request.auth.uid == uid
         || request.resource.data.priestUid == request.auth.uid
         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
           == request.resource.data.priestId
+      );
+      allow update: if signedIn() && !hasForbiddenKeys() && (
+        request.auth.uid == uid
+        || request.resource.data.priestUid == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+          == request.resource.data.priestId
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.priestId
+          == resource.data.priestId
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /father_transfers/{id} {
+      allow read: if signedIn() && (
+        isAdmin()
+        || resource.data.userId == request.auth.uid
+        || (
+          isPriest() && (
+            userData().priestId == resource.data.fromPriestId
+            || userData().priestId == resource.data.toPriestId
+          )
+        )
+      );
+      allow create: if signedIn() && !hasForbiddenKeys() && (
+        isAdmin()
+        || (
+          request.resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && userData().fatherId == request.resource.data.fromPriestId
+          && request.resource.data.toPriestId is string
+          && request.resource.data.toPriestId != request.resource.data.fromPriestId
+        )
+      );
+      allow update: if signedIn() && !hasForbiddenKeys() && (
+        isAdmin()
+        || (
+          resource.data.userId == request.auth.uid
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.fromPriestId == resource.data.fromPriestId
+          && request.resource.data.toPriestId == resource.data.toPriestId
+        )
+        || (
+          isPriest()
+          && resource.data.status == 'pending'
+          && (
+            userData().priestId == resource.data.fromPriestId
+            || userData().priestId == resource.data.toPriestId
+          )
+        )
       );
       allow delete: if isAdmin();
     }

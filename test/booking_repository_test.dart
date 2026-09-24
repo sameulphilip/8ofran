@@ -86,6 +86,23 @@ void main() {
     expect(repository.byId(booked.id)?.status, AppointmentStatus.confirmed);
   });
 
+  test('priest rejection stores an organizational reason', () async {
+    final starts = DateTime.now().add(const Duration(days: 11));
+    final slot = DateTime(starts.year, starts.month, starts.day, 16);
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: slot,
+    );
+    await repository.respond(
+      appointmentId: booked.id,
+      approve: false,
+      rejectReason: 'اختَر وقتًا آخر من الجدول',
+    );
+    expect(repository.byId(booked.id)?.status, AppointmentStatus.cancelled);
+    expect(repository.byId(booked.id)?.rejectReason, 'اختَر وقتًا آخر من الجدول');
+  });
+
   test('priest rejection frees the slot', () async {
     final starts = DateTime.now().add(const Duration(days: 19));
     final slot = DateTime(starts.year, starts.month, starts.day, 17);
@@ -113,6 +130,46 @@ void main() {
     );
     await repository.cancel(booked.id);
     expect(repository.byId(booked.id)?.status, AppointmentStatus.cancelled);
+  });
+
+  test('booking stores remind preference', () async {
+    final starts = DateTime.now().add(const Duration(days: 12));
+    final slot = DateTime(starts.year, starts.month, starts.day, 16);
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: slot,
+      remind: false,
+    );
+    expect(booked.remind, isFalse);
+    expect(repository.byId(booked.id)?.remind, isFalse);
+  });
+
+  test('priest can mark a started visit completed', () async {
+    final starts = DateTime.now().subtract(const Duration(minutes: 15));
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: starts,
+    );
+    await repository.respond(appointmentId: booked.id, approve: true);
+    await repository.complete(booked.id);
+    expect(repository.byId(booked.id)?.status, AppointmentStatus.completed);
+  });
+
+  test('cannot complete a future confirmed visit too early', () async {
+    final starts = DateTime.now().add(const Duration(days: 4));
+    final slot = DateTime(starts.year, starts.month, starts.day, 16);
+    final booked = await repository.book(
+      userId: 'u1',
+      priestId: 'p_youhanna',
+      startsAt: slot,
+    );
+    await repository.respond(appointmentId: booked.id, approve: true);
+    expect(
+      () => repository.complete(booked.id),
+      throwsA(isA<CompleteWindowException>()),
+    );
   });
 
   test('priest availability list excludes taken slots', () async {

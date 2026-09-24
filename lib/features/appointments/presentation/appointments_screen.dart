@@ -32,6 +32,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(reminderSyncProvider);
     final items = ref.watch(userAppointmentsProvider);
     final upcoming = items.where((a) => a.isUpcoming).toList();
     final past = items.where((a) => !a.isUpcoming).toList().reversed.toList();

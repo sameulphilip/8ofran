@@ -1,4 +1,5 @@
 import '../../../core/constants/app_constants.dart';
+import '../../admin/domain/church.dart';
 
 class Priest {
   const Priest({
@@ -30,6 +31,12 @@ class Priest {
   bool get hasAccount => uid != null && uid!.isNotEmpty;
 
   bool worksOn(DateTime date) => !offWeekdays.contains(date.weekday);
+
+  bool isBookable(Church? church) {
+    if (!isAvailable) return false;
+    if (church != null && !church.isActive) return false;
+    return true;
+  }
 
   Priest copyWith({
     String? id,

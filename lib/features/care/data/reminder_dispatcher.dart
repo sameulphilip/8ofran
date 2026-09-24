@@ -19,6 +19,7 @@ class ReminderDispatcher {
     for (final appointment in appointments) {
       if (appointment.userId != userId ||
           appointment.status != AppointmentStatus.confirmed ||
+          !appointment.remind ||
           !appointment.isUpcoming) {
         continue;
       }

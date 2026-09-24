@@ -5,7 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_nav.dart';
 import '../../../core/utils/url_actions.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/brand_mark.dart';
+import '../../../core/widgets/brand_logo.dart';
 import '../../../core/widgets/powered_by.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -24,9 +24,7 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(22, 12, 22, 32),
         children: [
-          const Center(child: BrandMark(size: 88)),
-          const SizedBox(height: 16),
-          const Center(child: BrandWordmark(size: 44)),
+          const Center(child: BrandLogo(height: 180)),
           const SizedBox(height: 20),
           AppCard(
             child: Text(

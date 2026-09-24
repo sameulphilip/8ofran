@@ -60,18 +60,19 @@ class TesterCatalog {
     fatherId: 'p_youhanna',
   );
 
+  static const priest = TesterAccount(
+    id: 'u_youhanna',
+    label: AppStrings.testerPriestSchedule,
+    fullName: 'أبونا يوحنا',
+    username: 'youhanna',
+    email: 'youhanna@ghofran.app',
+    role: UserRole.priest,
+    priestId: 'p_youhanna',
+  );
+
   static const logins = [admin];
 
   static const disposable = [
-    TesterAccount(
-      id: 'u_youhanna',
-      label: AppStrings.testerPriestSchedule,
-      fullName: 'أبونا يوحنا',
-      username: 'youhanna',
-      email: 'youhanna@ghofran.app',
-      role: UserRole.priest,
-      priestId: 'p_youhanna',
-    ),
     TesterAccount(
       id: 'u_mina',
       label: AppStrings.testerPriestMorning,

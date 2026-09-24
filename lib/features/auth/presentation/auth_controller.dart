@@ -10,7 +10,9 @@ class AuthController extends Notifier<AppUser?> {
     final sub = repo.authState().listen((user) {
       if (state?.id == user?.id &&
           state?.role == user?.role &&
-          state?.fatherId == user?.fatherId) {
+          state?.fatherId == user?.fatherId &&
+          state?.churchId == user?.churchId &&
+          state?.isSuspended == user?.isSuspended) {
         return;
       }
       state = user;
@@ -49,6 +51,10 @@ class AuthController extends Notifier<AppUser?> {
 
   Future<void> setFather(String fatherId) async {
     state = await ref.read(authRepositoryProvider).setFather(fatherId);
+  }
+
+  Future<void> refresh() async {
+    state = await ref.read(authRepositoryProvider).reload();
   }
 
   Future<void> loginWithGoogle() async {

@@ -11,16 +11,32 @@ import 'core/firebase/tester_seed.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/care/data/local_reminder_service.dart';
+import 'features/settings/presentation/app_lock_gate.dart';
+import 'features/splash/presentation/splash_end.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initFirebase();
-  await localReminderService.init();
-  await initializeDateFormatting('ar');
-  final prefs = await SharedPreferences.getInstance();
+
+  final prefsFuture = SharedPreferences.getInstance();
+  try {
+    await Future.wait<void>([
+      initFirebase(),
+      initializeDateFormatting('ar'),
+      localReminderService.init(),
+    ]).timeout(const Duration(seconds: 8));
+  } catch (_) {
+    // Continue — login can still open; cloud features retry later.
+  }
+
+  late final SharedPreferences prefs;
+  try {
+    prefs = await prefsFuture.timeout(const Duration(seconds: 5));
+  } catch (_) {
+    prefs = await SharedPreferences.getInstance();
+  }
+
   final database = LocalDatabase(prefs);
   await database.seedIfNeeded();
-  await seedDebugTesters();
 
   runApp(
     ProviderScope(
@@ -28,13 +44,29 @@ Future<void> main() async {
       child: const A3trafApp(),
     ),
   );
+
+  // ignore: unawaited_futures
+  seedDebugTesters();
 }
 
-class A3trafApp extends ConsumerWidget {
+class A3trafApp extends ConsumerStatefulWidget {
   const A3trafApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<A3trafApp> createState() => _A3trafAppState();
+}
+
+class _A3trafAppState extends ConsumerState<A3trafApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      removeHtmlSplash();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
@@ -49,6 +81,7 @@ class A3trafApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
+      builder: (context, child) => AppLockGate(child: child ?? const SizedBox()),
     );
   }
 }

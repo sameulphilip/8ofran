@@ -32,14 +32,36 @@ class LocalReminderService {
 
   Future<void> scheduleAppointment(Appointment appointment) async {
     if (kIsWeb || !_ready) return;
+    if (!appointment.remind ||
+        appointment.status != AppointmentStatus.confirmed ||
+        !appointment.isUpcoming) {
+      await cancelAppointment(appointment);
+      return;
+    }
     await _scheduleLead(appointment, days: 2);
     await _scheduleLead(appointment, days: 1);
+  }
+
+  Future<void> cancelAppointment(Appointment appointment) async {
+    if (kIsWeb || !_ready) return;
+    for (final days in AppConstants.reminderLeadDays) {
+      await _plugin.cancel(id: _reminderId(appointment, days));
+    }
+  }
+
+  Future<void> cancelAll() async {
+    if (kIsWeb || !_ready) return;
+    await _plugin.cancelAll();
+  }
+
+  int _reminderId(Appointment appointment, int days) {
+    return appointment.id.hashCode.abs() % 100000000 + days;
   }
 
   Future<void> _scheduleLead(Appointment appointment, {required int days}) async {
     final when = appointment.startsAt.subtract(Duration(days: days));
     if (!when.isAfter(DateTime.now())) return;
-    final id = appointment.id.hashCode.abs() % 100000000 + days;
+    final id = _reminderId(appointment, days);
     await _plugin.zonedSchedule(
       id: id,
       title: days == 2

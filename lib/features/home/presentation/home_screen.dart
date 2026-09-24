@@ -18,6 +18,8 @@ import '../../appointments/domain/appointment.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../booking/presentation/booking_controller.dart';
 import '../../booking/presentation/booking_nav.dart';
+import '../../info/domain/church_calendar.dart';
+import '../../priests/data/father_transfer_repository.dart';
 import '../../priests/data/priest_repository.dart';
 import '../../care/data/care_repository.dart';
 import '../../care/presentation/priest_home_screen.dart';
@@ -48,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
         : ref.watch(priestRepositoryProvider).byId(next.priestId);
     final canon = ref.watch(myCanonProvider).value;
     final verse = VerseOfDay.today();
+    final season = ChurchCalendar.seasonFor(DateTime.now());
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
@@ -100,6 +103,15 @@ class HomeScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
+          if (ref.watch(myFatherTransferProvider) != null)
+            AppCard(
+              color: AppColors.warning100,
+              onTap: () => context.push('/change-father'),
+              child: const Text(
+                AppStrings.changeFatherPending,
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ).enter(context),
           if (next != null && priest != null)
             AppCard(
               onTap: () => context.push('/appointment/${next.id}'),
@@ -248,10 +260,32 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
+          AppCard(
+            color: AppColors.primary50,
+            onTap: () => context.push('/info/calendar'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${AppStrings.seasonToday}: ${season.title}',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  season.body,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ).enter(context, index: 5),
+          const SizedBox(height: 12),
           VerseBanner(
             text: verse.text,
             reference: verse.reference,
-          ).enter(context, index: 5),
+          ).enter(context, index: 6),
         ],
       ),
     );

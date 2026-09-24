@@ -9,6 +9,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/priest_avatar.dart';
+import '../../admin/data/admin_repository.dart';
+import '../../admin/domain/admin_scope.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../care/data/care_repository.dart';
@@ -60,9 +62,10 @@ class _ChooseFatherScreenState extends ConsumerState<ChooseFatherScreen> {
   @override
   Widget build(BuildContext context) {
     final priestsAsync = ref.watch(priestsStreamProvider);
-    final priests = (priestsAsync.value ?? const [])
-        .where((priest) => priest.isAvailable)
-        .toList();
+    final priests = bookablePriests(
+      priestsAsync.value ?? const [],
+      ref.watch(churchesProvider),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.chooseFather)),

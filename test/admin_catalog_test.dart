@@ -1,3 +1,4 @@
+import 'package:a3traf/features/admin/domain/admin_scope.dart';
 import 'package:a3traf/core/data/local_database.dart';
 import 'package:a3traf/features/admin/domain/church.dart';
 import 'package:a3traf/features/appointments/data/appointment_repository.dart';
@@ -8,11 +9,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  test('church json keeps name and city', () {
-    const church = Church(id: 'ch1', name: 'مار مرقس', city: 'القاهرة');
+  test('church json keeps name, city, and place details', () {
+    const church = Church(
+      id: 'ch1',
+      name: 'مار مرقس',
+      city: 'القاهرة',
+      address: 'العباسية، القاهرة',
+      mapsQuery: 'كاتدرائية القديس مرقس العباسية القاهرة',
+      phone: '0224820000',
+      isActive: false,
+    );
     final roundtrip = Church.fromJson(church.toJson());
     expect(roundtrip.name, 'مار مرقس');
     expect(roundtrip.city, 'القاهرة');
+    expect(roundtrip.address, 'العباسية، القاهرة');
+    expect(roundtrip.mapQuery, 'كاتدرائية القديس مرقس العباسية القاهرة');
+    expect(roundtrip.hasPhone, isTrue);
+    expect(roundtrip.isActive, isFalse);
   });
 
   test('priest skips configured off weekdays', () {
@@ -36,6 +49,7 @@ void main() {
     );
     expect(admin.isAdmin, isTrue);
     expect(admin.isPriest, isFalse);
+    expect(admin.isSuperAdmin, isTrue);
   });
 
   test('slot list follows a priest hours window', () async {
@@ -63,5 +77,17 @@ void main() {
       DateTime(2026, 3, 2, 9, 30),
       DateTime(2026, 3, 2, 10),
     ]);
+  });
+
+  test('paused church makes a priest unbookable', () {
+    const priest = Priest(
+      id: 'p1',
+      name: 'أبونا',
+      churchId: 'ch1',
+      churchName: 'كنيسة',
+    );
+    const paused = Church(id: 'ch1', name: 'كنيسة', isActive: false);
+    expect(priest.isBookable(paused), isFalse);
+    expect(bookablePriests([priest], [paused]), isEmpty);
   });
 }

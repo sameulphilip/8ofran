@@ -1,47 +1,29 @@
-import 'dart:js_interop';
-
 import 'package:web/web.dart' as web;
 
 void bindHtmlSplashEnd(void Function() onDone) {
-  final node = web.document.getElementById('ghofran-splash');
-  if (node == null || !node.isA<web.HTMLVideoElement>()) {
-    onDone();
-    return;
-  }
-  final video = node as web.HTMLVideoElement;
-  var done = false;
-  void finish() {
-    if (done) return;
-    done = true;
-    video.remove();
-    onDone();
-  }
-
-  if (video.ended) {
-    finish();
-    return;
-  }
-
-  void onEnded(web.Event _) => finish();
-  void onError(web.Event _) => finish();
-  video.addEventListener('ended', onEnded.toJS);
-  video.addEventListener('error', onError.toJS);
-  video.muted = true;
-  video.play();
-  video.addEventListener('click', ((web.Event _) => finish()).toJS);
-  Future<void>.delayed(const Duration(seconds: 8), finish);
-  void pollRemoved() {
-    if (done) return;
-    if (web.document.getElementById('ghofran-splash') == null) {
-      finish();
-      return;
-    }
-    Future<void>.delayed(const Duration(milliseconds: 200), pollRemoved);
-  }
-
-  pollRemoved();
+  // Web boot is covered by the HTML branding layer.
+  onDone();
 }
 
 void removeHtmlSplash() {
-  web.document.getElementById('ghofran-splash')?.remove();
+  web.document.documentElement?.setAttribute('data-flutter-ready', '1');
+  _tryRemoveSplash();
+}
+
+void _tryRemoveSplash() {
+  final doc = web.document;
+  final ready = doc.documentElement?.getAttribute('data-flutter-ready') == '1';
+  if (!ready) return;
+
+  final video = doc.getElementById('ghofran-splash');
+  final splashDone =
+      video == null || video.getAttribute('data-splash-done') == '1';
+
+  if (!splashDone) {
+    Future<void>.delayed(const Duration(milliseconds: 120), _tryRemoveSplash);
+    return;
+  }
+
+  doc.getElementById('ghofran-splash-root')?.remove();
+  video?.remove();
 }

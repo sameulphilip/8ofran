@@ -24,6 +24,12 @@ class InfoScreen extends StatelessWidget {
         children: [
           _tile(
             context,
+            Icons.checklist_outlined,
+            AppStrings.prepareChecklist,
+            '/info/prepare',
+          ),
+          _tile(
+            context,
             Icons.menu_book_outlined,
             AppStrings.confessionGuide,
             '/info/guide',
@@ -39,6 +45,12 @@ class InfoScreen extends StatelessWidget {
             Icons.auto_stories_outlined,
             AppStrings.reflectionText,
             '/info/psalm',
+          ),
+          _tile(
+            context,
+            Icons.calendar_month_outlined,
+            AppStrings.churchCalendar,
+            '/info/calendar',
           ),
           _tile(
             context,

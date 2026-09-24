@@ -115,6 +115,86 @@ class CareRepository {
     });
   }
 
+  Future<void> reassign({
+    required String userId,
+    required String priestId,
+    String? priestUid,
+  }) async {
+    if (!_cloud) {
+      final db = _db;
+      if (db == null) return;
+      PastoralCare? previous;
+      for (final item in db.cares()) {
+        if (item.userId == userId) previous = item;
+      }
+      await db.saveCares([
+        for (final item in db.cares())
+          if (item.userId != userId) item,
+        PastoralCare(
+          userId: userId,
+          priestId: priestId,
+          intervalDays:
+              previous?.intervalDays ?? AppConstants.defaultCadenceDays,
+          priestUid: priestUid,
+        ),
+      ]);
+      return;
+    }
+    final ref = _store!.collection('pastoral_care').doc(userId);
+    final existing = await ref.get();
+    await ref.set({
+      'userId': userId,
+      'priestId': priestId,
+      if (priestUid != null) 'priestUid': priestUid,
+      if (!existing.exists) 'intervalDays': AppConstants.defaultCadenceDays,
+    }, SetOptions(merge: true));
+  }
+
+  Stream<Map<String, SpiritualCanon>> watchLatestCanons(String priestId) {
+    if (!_cloud) {
+      final latest = <String, SpiritualCanon>{};
+      final items = [..._db?.canons() ?? const <SpiritualCanon>[]]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      for (final canon in items) {
+        if (canon.priestId != priestId) continue;
+        latest.putIfAbsent(canon.userId, () => canon);
+      }
+      return Stream.value(latest);
+    }
+    return _store!
+        .collection('spiritual_canons')
+        .where('priestId', isEqualTo: priestId)
+        .snapshots()
+        .map((snapshot) {
+          final items = [
+            for (final doc in snapshot.docs)
+              SpiritualCanon.fromJson({
+                ...doc.data(),
+                'id': doc.id,
+                'createdAt': _createdAt(doc.data()['createdAt']),
+              }),
+          ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final latest = <String, SpiritualCanon>{};
+          for (final canon in items) {
+            latest.putIfAbsent(canon.userId, () => canon);
+          }
+          return latest;
+        });
+  }
+
+  Future<void> clearLink(String userId) async {
+    if (!_cloud) {
+      final db = _db;
+      if (db == null) return;
+      await db.saveCares([
+        for (final item in db.cares())
+          if (item.userId != userId) item,
+      ]);
+      return;
+    }
+    await _store!.collection('pastoral_care').doc(userId).delete();
+  }
+
   Future<void> setInterval({
     required String userId,
     required String priestId,

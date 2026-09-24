@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_nav.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../data/admin_repository.dart';
 
 class ChurchesScreen extends ConsumerWidget {
@@ -16,8 +17,10 @@ class ChurchesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final actor = ref.watch(authControllerProvider);
     final churchesAsync = ref.watch(churchesStreamProvider);
-    final churches = churchesAsync.value ?? const [];
+    final churches = ref.watch(scopedChurchesProvider);
+    final canAdd = actor?.isSuperAdmin ?? false;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -27,11 +30,13 @@ class ChurchesScreen extends ConsumerWidget {
         ),
         title: const Text(AppStrings.churches),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/admin/churches/new'),
-        icon: const Icon(Icons.add),
-        label: const Text(AppStrings.addChurch),
-      ),
+      floatingActionButton: canAdd
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/admin/churches/new'),
+              icon: const Icon(Icons.add),
+              label: const Text(AppStrings.addChurch),
+            )
+          : null,
       body: churchesAsync.isLoading && churches.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : churches.isEmpty
@@ -73,16 +78,19 @@ class ChurchesScreen extends ConsumerWidget {
                                 fontSize: 16,
                               ),
                             ),
-                            if (church.subtitle.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                church.subtitle,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
+                            const SizedBox(height: 4),
+                            Text(
+                              [
+                                if (church.subtitle.isNotEmpty) church.subtitle,
+                                church.isActive
+                                    ? AppStrings.churchActive
+                                    : AppStrings.churchPaused,
+                              ].join(' · '),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
                               ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
